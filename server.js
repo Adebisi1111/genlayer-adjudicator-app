@@ -18,7 +18,7 @@ import { toBytes } from "viem";
 import { readFileSync } from "fs";
 
 // --- Config -----------------------------------------------------------------
-const ADJUDICATOR_ADDRESS = "0x6a3531CD6C2A5bB6718188796b1FE5BE7A3574BC"; // deployed adjudicator (fresh)
+const ADJUDICATOR_ADDRESS = "0x92047a5C8F083D887321F729695cf61Da8A2DE41"; // deployed adjudicator (corrected consensus)
 const KEYSTORE = "/home/administrator/.genlayer/keystores/testwallet.json";
 const KEY_PASSWORD = "genlayer2026";
 

@@ -29,8 +29,8 @@ GENLAYER_KEYSTORE=/path/to/keystore.json GENLAYER_KEYPASS=... npm start
 
 ## Deployed contract
 
-- **Agent Payment Adjudicator**: `0x6a3531CD6C2A5bB6718188796b1FE5BE7A3574BC`
-- Explorer: https://explorer-bradbury.genlayer.com/address/0x890BE3B1168779Cde231793a0D599f7D08A06Cc8
+- **Agent Payment Adjudicator**: `0x92047a5C8F083D887321F729695cf61Da8A2DE41`
+- Explorer: https://explorer-bradbury.genlayer.com/address/0x92047a5C8F083D887321F729695cf61Da8A2DE41
 - Contract source + tests: https://github.com/Adebisi1111/genlayer-adjudicator
 
 ## Use case
