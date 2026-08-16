@@ -1,6 +1,5 @@
 import { createClient } from "genlayer-js";
 import { testnetBradbury } from "genlayer-js/chains";
-import { createWalletClient, custom } from "viem";
 
 const ADJUDICATOR_ADDRESS = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F";
 let client = null;
@@ -11,23 +10,20 @@ async function connectWallet(){
   const note = document.getElementById('netNote');
   try {
     if (!window.ethereum) throw new Error("MetaMask is not installed. Please install the MetaMask browser extension.");
-    const chainIdHex = "0x" + testnetBradbury.id.toString(16);
-    try {
-      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: chainIdHex }] });
-    } catch (sw) {
-      await window.ethereum.request({
-        method: "wallet_addEthereumChain",
-        params: [{ chainId: chainIdHex, chainName: testnetBradbury.name,
-          rpcUrls: testnetBradbury.rpcUrls.default.http, nativeCurrency: testnetBradbury.nativeCurrency,
-          blockExplorerUrls: [testnetBradbury.blockExplorers?.default.url] }]
-      });
-    }
-    account = createWalletClient({ transport: custom(window.ethereum) });
-    const address = await account.address;
     client = createClient({ chain: testnetBradbury });
-    client.account = account;
+    // genlayer-js native connect: installs GenLayer snap + sets Bradbury network
+    const snap = await client.connect('testnetBradbury');
+    // connect() sets client.account via the snap; if not, fall back to EIP-1193 address
+    if (!client.account) {
+      const [address] = await window.ethereum.request({ method: "eth_requestAccounts" });
+      client.account = { address };
+    }
+    const address = typeof client.account?.address === "string"
+      ? client.account.address
+      : (await window.ethereum.request({ method: "eth_accounts" }))[0];
+    account = client.account;
     b.textContent = "Connected: " + address;
-    note.textContent = "Signing with your MetaMask wallet on GenLayer Bradbury testnet.";
+    note.textContent = "Signing with your MetaMask wallet (GenLayer snap) on Bradbury testnet.";
     document.getElementById('connectBtn').disabled = true;
   } catch(e){
     b.textContent = "Connect failed";
@@ -79,8 +75,10 @@ async function read(){
   }catch(e){o.textContent='Error: '+e;}
 }
 
-// expose handlers for inline onclick usage
+// expose handlers + client for inline onclick / testing
 window.connectWallet = connectWallet;
 window.openDispute = openDispute;
 window.resolve = resolve;
 window.read = read;
+window.__getClient = () => client;
+window.__getAccount = () => account;

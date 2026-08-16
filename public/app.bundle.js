@@ -18953,19 +18953,6 @@ function walletActions(client2) {
   };
 }
 
-// node_modules/viem/_esm/clients/createWalletClient.js
-function createWalletClient(parameters) {
-  const { key = "wallet", name = "Wallet Client", transport } = parameters;
-  const client2 = createClient({
-    ...parameters,
-    key,
-    name,
-    transport,
-    type: "walletClient"
-  });
-  return client2.extend(walletActions);
-}
-
 // node_modules/viem/_esm/clients/transports/createTransport.js
 function createTransport({ key, methods, name, request, retryCount = 3, retryDelay = 150, timeout, type }, value) {
   const uid2 = uid();
@@ -37821,27 +37808,16 @@ async function connectWallet() {
   const note = document.getElementById("netNote");
   try {
     if (!window.ethereum) throw new Error("MetaMask is not installed. Please install the MetaMask browser extension.");
-    const chainIdHex = "0x" + testnetBradbury.id.toString(16);
-    try {
-      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: chainIdHex }] });
-    } catch (sw) {
-      await window.ethereum.request({
-        method: "wallet_addEthereumChain",
-        params: [{
-          chainId: chainIdHex,
-          chainName: testnetBradbury.name,
-          rpcUrls: testnetBradbury.rpcUrls.default.http,
-          nativeCurrency: testnetBradbury.nativeCurrency,
-          blockExplorerUrls: [testnetBradbury.blockExplorers?.default.url]
-        }]
-      });
-    }
-    account = createWalletClient({ transport: custom(window.ethereum) });
-    const address = await account.address;
     client = createClient2({ chain: testnetBradbury });
-    client.account = account;
+    const snap = await client.connect("testnetBradbury");
+    if (!client.account) {
+      const [address2] = await window.ethereum.request({ method: "eth_requestAccounts" });
+      client.account = { address: address2 };
+    }
+    const address = typeof client.account?.address === "string" ? client.account.address : (await window.ethereum.request({ method: "eth_accounts" }))[0];
+    account = client.account;
     b.textContent = "Connected: " + address;
-    note.textContent = "Signing with your MetaMask wallet on GenLayer Bradbury testnet.";
+    note.textContent = "Signing with your MetaMask wallet (GenLayer snap) on Bradbury testnet.";
     document.getElementById("connectBtn").disabled = true;
   } catch (e) {
     b.textContent = "Connect failed";
@@ -37913,6 +37889,8 @@ window.connectWallet = connectWallet;
 window.openDispute = openDispute;
 window.resolve = resolve;
 window.read = read;
+window.__getClient = () => client;
+window.__getAccount = () => account;
 /*! Bundled license information:
 
 @noble/hashes/esm/utils.js:
