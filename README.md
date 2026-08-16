@@ -10,21 +10,29 @@ A working application that **actually interacts with a deployed GenLayer Intelli
 
 This is genuine app logic talking to GenLayer — not a static visualization.
 
+## Security model — per-user wallet signing (Portal-steward compliant)
+
+This app implements **per-user wallet signing**, the model requested by the GenLayer Portal review:
+
+- **The server holds NO private keys and signs NOTHING.** `server.js` is a stateless, read-only relay: it only serves the static UI and proxies the read-only `get_dispute` view. It cannot send value or sign any transaction.
+- **All writes are signed in the user's own browser** via `genlayer-js` + MetaMask (`client.connect()` → `window.ethereum`). The connected wallet is the on-chain payer and signer for `open_dispute` / `resolve`. The browser user — not a backend wallet — pays gas and the dispute deposit.
+- **No unauthenticated spend is possible:** there is no backend key to spend, and write endpoints do not exist server-side.
+- **Testnet only.** The app targets GenLayer Bradbury testnet; no mainnet value is at risk.
+
 ## Architecture
 
-- `server.js` — Node + Express backend using `genlayer-js` (`createClient({ chain: testnetBradbury })`). Loads the test wallet from the genlayer keystore, exposes three endpoints.
-- `public/index.html` — brown/butter UI to open disputes, resolve them, and read state.
+- `server.js` — Node + Express, **read-only relay**. `createClient({ chain: testnetBradbury })` with no account. Serves `public/` and `GET /api/dispute/:id` (view call only).
+- `public/index.html` — brown/butter UI. "Connect Wallet" uses `genlayer-js` `connect()` (MetaMask). `open_dispute` / `resolve` run client-side via `client.writeContract` with the user's account.
 - Endpoints:
-  - `POST /api/open` `{ agent, service_url, claim, amount }` → opens a dispute (write)
-  - `POST /api/resolve` `{ dispute_id }` → triggers resolution (write)
-  - `GET /api/dispute/:id` → reads live contract state (view)
+  - `GET /api/dispute/:id` → reads live contract state (view, no key, no value)
+  - Writes (`open_dispute`, `resolve`) → executed in-browser by the user's wallet
 
 ## Run locally
 
 ```bash
 npm install
-GENLAYER_KEYSTORE=/path/to/keystore.json GENLAYER_KEYPASS=... npm start
-# open http://localhost:3001
+npm start
+# open http://localhost:3001 and click "Connect Wallet" (MetaMask on Bradbury testnet)
 ```
 
 ## Deployed contract

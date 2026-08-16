@@ -23,6 +23,9 @@
   .status{margin-top:10px;font-size:13px;color:var(--muted)}
   .ok{color:var(--green)} .err{color:var(--red)}
   a{color:var(--butter)}
+  .walletbar{display:flex;align-items:center;gap:12px;margin:14px 0}
+  .addr{font-size:13px;color:var(--butter-dim)}
+  .note{font-size:12px;color:var(--muted);margin-top:8px}
 </style>
 </head>
 <body>
@@ -30,8 +33,14 @@
   <header>
     <span class="badge">GenLayer Project</span>
     <h1>Agent Payment Adjudicator</h1>
-    <p class="sub">Live app that interacts with the deployed Intelligent Contract on GenLayer Bradbury testnet. Open a payment dispute and trigger AI-consensus resolution.</p>
+    <p class="sub">Per-user wallet signing. You connect your own MetaMask (GenLayer testnet) wallet and sign every on-chain write yourself — this app holds no keys and never spends on your behalf.</p>
   </header>
+
+  <div class="walletbar">
+    <button id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
+    <span class="addr" id="addr">Not connected</span>
+  </div>
+  <div class="note" id="netNote"></div>
 
   <h2>Open a dispute</h2>
   <div class="card">
@@ -41,9 +50,9 @@
     <input id="service" placeholder="https://..." value="https://example.com/service-not-done" />
     <label>Claim</label>
     <textarea id="claim" placeholder="What went wrong">Agent did not deliver the agreed service.</textarea>
-    <label>Amount (GEN, deposited)</label>
+    <label>Amount (GEN, deposited — paid from YOUR wallet)</label>
     <input id="amount" placeholder="0" value="0" />
-    <button onclick="openDispute()">Open dispute (on-chain)</button>
+    <button onclick="openDispute()">Open dispute (sign with your wallet)</button>
     <div class="status" id="openStatus"></div>
   </div>
 
@@ -51,7 +60,7 @@
   <div class="card">
     <label>Dispute ID</label>
     <input id="disputeId" placeholder="DSP-0" value="DSP-0" />
-    <button onclick="resolve()">Trigger resolution</button>
+    <button onclick="resolve()">Trigger resolution (sign with your wallet)</button>
     <div class="status" id="resolveStatus"></div>
   </div>
 
@@ -70,30 +79,67 @@
   </div>
 </div>
 
-<script>
+<script type="module">
+import { createClient } from "https://unpkg.com/genlayer-js@1.1.8/dist/index.mjs";
+import { testnetBradbury } from "https://unpkg.com/genlayer-js@1.1.8/chains/chains.mjs";
+
+const ADJUDICATOR_ADDRESS = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F";
+let client = null;
+let account = null;
+
+async function connectWallet(){
+  const b = document.getElementById('addr');
+  const note = document.getElementById('netNote');
+  try {
+    client = createClient({ chain: testnetBradbury });
+    // genlayer-js connect() wires window.ethereum (MetaMask) as the signer.
+    account = await client.connect?.() ?? (window.ethereum ? (await window.ethereum.request({method:'eth_requestAccounts'}), window.ethereum) : null);
+    client.account = account;
+    const addr = await client.getAddress?.() ?? (account.address || (await account.request({method:'eth_accounts'}))[0]);
+    b.textContent = "Connected: " + addr;
+    note.textContent = "Signing with your MetaMask wallet on GenLayer Bradbury testnet. You pay gas + deposit from your own wallet.";
+    document.getElementById('connectBtn').disabled = true;
+  } catch(e){
+    b.textContent = "Connect failed";
+    note.textContent = "Error: " + e.message + " (install MetaMask and switch to GenLayer Bradbury testnet)";
+  }
+}
+
+function requireWallet(bar){
+  if(!client || !account){ bar.className='status err'; bar.textContent='Connect your wallet first.'; return false; }
+  return true;
+}
+
 async function openDispute(){
-  const b=document.getElementById('openStatus'); b.className='status'; b.textContent='Submitting to GenLayer…';
+  const b=document.getElementById('openStatus'); b.className='status'; b.textContent='Opening — confirm in MetaMask…';
+  if(!requireWallet(b)) return;
   try{
-    const r=await fetch('/api/open',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({agent:document.getElementById('agent').value,
-        service_url:document.getElementById('service').value,
-        claim:document.getElementById('claim').value,
-        amount:document.getElementById('amount').value})});
-    const d=await r.json();
-    b.className=d.error?'status err':'status ok';
-    b.textContent=d.error?('Error: '+d.error):('Opened. Tx: '+d.txHash);
-  }catch(e){b.className='status err';b.textContent='Error: '+e;}
+    const txHash = await client.writeContract({
+      address: ADJUDICATOR_ADDRESS,
+      functionName: "open_dispute",
+      args: [document.getElementById('agent').value,
+             document.getElementById('service').value,
+             document.getElementById('claim').value],
+      value: BigInt(document.getElementById('amount').value || 0),
+    });
+    b.className='status ok'; b.textContent='Opened. Tx: '+txHash;
+  }catch(e){ b.className='status err'; b.textContent='Error: '+e.message; }
 }
+
 async function resolve(){
-  const b=document.getElementById('resolveStatus'); b.className='status'; b.textContent='Resolving on GenLayer…';
+  const b=document.getElementById('resolveStatus'); b.className='status'; b.textContent='Resolving — confirm in MetaMask…';
+  if(!requireWallet(b)) return;
   try{
-    const r=await fetch('/api/resolve',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({dispute_id:document.getElementById('disputeId').value})});
-    const d=await r.json();
-    b.className=d.error?'status err':'status ok';
-    b.textContent=d.error?('Error: '+d.error):('Resolved. Tx: '+d.txHash);
-  }catch(e){b.className='status err';b.textContent='Error: '+e;}
+    const txHash = await client.writeContract({
+      address: ADJUDICATOR_ADDRESS,
+      functionName: "resolve",
+      args: [document.getElementById('disputeId').value],
+      value: 0n,
+    });
+    b.className='status ok'; b.textContent='Resolved. Tx: '+txHash;
+  }catch(e){ b.className='status err'; b.textContent='Error: '+e.message; }
 }
+
 async function read(){
   const o=document.getElementById('out'); o.textContent='Reading…';
   try{
