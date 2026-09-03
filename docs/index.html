@@ -177,6 +177,15 @@
   // Open dispute
   openBtn.addEventListener('click', async function() {
     if (!account) return showStatus('openStatus', 'warn', 'Connect wallet first');
+    
+    // Check network first
+    const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+    const currentId = parseInt(currentChainId, 16);
+    if (currentId !== CHAIN_ID) {
+      showStatus('openStatus', 'err', 'Wrong network! Switch to GenLayer Bradbury Testnet (Chain ID: ' + CHAIN_ID + '). You are on chain ' + currentId);
+      return;
+    }
+    
     try {
       showStatus('openStatus', 'warn', 'Opening dispute...');
       const amountGen = document.getElementById('amount').value || '0';
