@@ -1,101 +1,100 @@
-// Agent Payment Adjudicator - Plain JavaScript (no modules)
-(function() {
-  const ADDR = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F";
-  const RPC = "https://rpc-bradbury.genlayer.com";
-  const CHAIN_ID = 6675;
+// Main app.js - UI interactions
+import { ensureBradbury, connectWallet, openDispute, resolveDispute, getDispute } from "./wallet.mjs";
 
-  let client = null;
-  let account = null;
-  let isConnected = false;
+// DOM elements
+const addrEl = document.getElementById("addr");
+const noteEl = document.getElementById("netNote");
+const btn = document.getElementById("connectBtn");
+const openBtn = document.getElementById("openBtn");
+const resolveBtn = document.getElementById("resolveBtn");
+const readBtn = document.getElementById("readBtn");
 
-  // Wait for DOM to be ready
-  function ready(fn) {
-    if (document.readyState !== 'loading') {
-      fn();
-    } else {
-      document.addEventListener('DOMContentLoaded', fn);
-    }
+let isConnected = false;
+
+// Status display helper
+function showStatus(id, type, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = "status show " + type;
+}
+
+// Connect wallet button
+btn.addEventListener("click", async () => {
+  if (isConnected) {
+    // Disconnect
+    isConnected = false;
+    addrEl.textContent = "Not connected";
+    noteEl.textContent = "";
+    btn.textContent = "Connect Wallet";
+    return;
   }
 
-  ready(function() {
-    console.log('DOM ready, initializing...');
+  try {
+    addrEl.textContent = "Connecting...";
     
-    const btn = document.getElementById('connectBtn');
-    const addrEl = document.getElementById('addr');
-    const noteEl = document.getElementById('netNote');
+    // Step 1: Ensure Bradbury network
+    await ensureBradbury();
+    
+    // Step 2: Connect wallet
+    const account = await connectWallet();
+    
+    // Update UI
+    addrEl.textContent = account.slice(0,6) + "..." + account.slice(-4);
+    noteEl.innerHTML = '<span style="color:#4ade80">● Connected</span>';
+    btn.textContent = "Disconnect";
+    isConnected = true;
+    
+  } catch(e) {
+    addrEl.textContent = "Failed: " + e.message;
+    noteEl.textContent = "";
+    console.error("Connection error:", e);
+  }
+});
 
-    if (!btn) {
-      console.error('connectBtn NOT FOUND');
-      return;
-    }
+// Open dispute button
+openBtn.addEventListener("click", async () => {
+  if (!isConnected) return showStatus("openStatus", "warn", "Connect wallet first");
+  try {
+    showStatus("openStatus", "warn", "Opening dispute...");
+    
+    const agent = document.getElementById("agent").value;
+    const serviceUrl = document.getElementById("service").value;
+    const claim = document.getElementById("claim").value;
+    
+    const txHash = await openDispute(agent, serviceUrl, claim);
+    showStatus("openStatus", "ok", "Opened! Tx: " + txHash);
+  } catch(e) {
+    showStatus("openStatus", "err", "Error: " + e.message);
+    console.error("Open dispute error:", e);
+  }
+});
 
-    // Connect wallet function
-    window.connectWallet = async function() {
-      if (isConnected) {
-        console.log('Already connected');
-        return;
-      }
+// Resolve dispute button
+resolveBtn.addEventListener("click", async () => {
+  if (!isConnected) return showStatus("resolveStatus", "warn", "Connect wallet first");
+  try {
+    showStatus("resolveStatus", "warn", "Resolving with AI...");
+    
+    const disputeId = document.getElementById("disputeId").value;
+    const txHash = await resolveDispute(disputeId);
+    showStatus("resolveStatus", "ok", "Resolved! Tx: " + txHash);
+  } catch(e) {
+    showStatus("resolveStatus", "err", "Error: " + e.message);
+    console.error("Resolve error:", e);
+  }
+});
 
-      addrEl.textContent = 'Connecting...';
-      try {
-        if (!window.ethereum) {
-          addrEl.textContent = 'Wallet not detected';
-          return;
-        }
+// Read dispute button
+readBtn.addEventListener("click", async () => {
+  if (!isConnected) return showStatus("out", "warn", "Connect wallet first");
+  try {
+    const disputeId = document.getElementById("readId").value;
+    const result = await getDispute(disputeId);
+    document.getElementById("out").textContent = JSON.stringify(result, null, 2);
+  } catch(e) {
+    document.getElementById("out").textContent = "Error: " + e.message;
+    console.error("Read error:", e);
+  }
+});
 
-        // Dynamic import of viem
-        const { createWalletClient, custom } = await import('viem');
-        
-        const CHAIN = {
-          id: CHAIN_ID,
-          name: "GenLayer Bradbury Testnet",
-          rpcUrls: { default: { http: [RPC] } },
-          nativeCurrency: { name: "GEN", symbol: "GEN", decimals: 18 },
-        };
-
-        client = createWalletClient({
-          chain: CHAIN,
-          transport: custom(window.ethereum),
-        });
-
-        const accounts = await client.getAddresses();
-        if (!accounts?.length) throw new Error('No accounts found');
-
-        account = { address: accounts[0] };
-        isConnected = true;
-
-        addrEl.textContent = accounts[0].slice(0,6) + '...' + accounts[0].slice(-4);
-        noteEl.innerHTML = '<span style="color:#4ade80">● Connected</span>';
-        btn.textContent = 'Disconnect';
-
-        console.log('Connected as', accounts[0]);
-
-      } catch(e) {
-        addrEl.textContent = 'Failed: ' + e.message;
-        console.error('Connection error:', e);
-      }
-    };
-
-    // Disconnect wallet function
-    window.disconnectWallet = function() {
-      client = null;
-      account = null;
-      isConnected = false;
-      addrEl.textContent = 'Not connected';
-      noteEl.textContent = '';
-      btn.textContent = 'Connect Wallet';
-      console.log('Disconnected');
-    };
-
-    // Button click handler
-    btn.addEventListener('click', function() {
-      if (isConnected) {
-        window.disconnectWallet();
-      } else {
-        window.connectWallet();
-      }
-    });
-
-    console.log('Button handler attached');
-  });
-})();
+console.log("App initialized");

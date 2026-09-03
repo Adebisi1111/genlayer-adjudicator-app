@@ -18973,13 +18973,13 @@ function createTransport({ key, methods, name, request, retryCount = 3, retryDel
 }
 
 // node_modules/viem/_esm/clients/transports/custom.js
-function custom(provider, config = {}) {
+function custom(provider2, config = {}) {
   const { key = "custom", methods, name = "Custom Provider", retryDelay } = config;
   return ({ retryCount: defaultRetryCount }) => createTransport({
     key,
     methods,
     name,
-    request: provider.request.bind(provider),
+    request: provider2.request.bind(provider2),
     retryCount: config.retryCount ?? defaultRetryCount,
     retryDelay,
     type: "custom"
@@ -36934,12 +36934,12 @@ var transactionActions = (client2, publicClient) => ({
     if (typeof client2.account === "object" && "signMessage" in client2.account) {
       signature = await client2.account.signMessage({ message: { raw: messageHash } });
     } else {
-      const provider = typeof window !== "undefined" ? window.ethereum : void 0;
-      if (!provider) {
+      const provider2 = typeof window !== "undefined" ? window.ethereum : void 0;
+      if (!provider2) {
         throw new Error("No provider available for signing. Use a private key account or ensure a wallet is connected.");
       }
       const address = typeof client2.account === "string" ? client2.account : client2.account.address;
-      signature = await provider.request({
+      signature = await provider2.request({
         method: "personal_sign",
         params: [messageHash, address]
       });
@@ -37702,11 +37702,11 @@ var PROVIDER_METHODS = /* @__PURE__ */ new Set([
   "personal_sign",
   "eth_signTypedData_v4"
 ]);
-var assertChainMatch = async (provider, chainConfig) => {
+var assertChainMatch = async (provider2, chainConfig) => {
   if (chainConfig.isStudio) return;
   const expectedChainIdHex = `0x${chainConfig.id.toString(16)}`;
   try {
-    const currentChainId = await provider.request({ method: "eth_chainId" });
+    const currentChainId = await provider2.request({ method: "eth_chainId" });
     if (currentChainId !== expectedChainIdHex) {
       const currentId = parseInt(currentChainId, 16);
       throw new Error(
@@ -37722,13 +37722,13 @@ var getCustomTransportConfig = (config, chainConfig) => {
   return {
     async request({ method, params = [] }) {
       if (PROVIDER_METHODS.has(method) && isAddress2) {
-        const provider = config.provider || (typeof window !== "undefined" ? window.ethereum : void 0);
-        if (provider) {
+        const provider2 = config.provider || (typeof window !== "undefined" ? window.ethereum : void 0);
+        if (provider2) {
           try {
             if (method === "eth_sendTransaction" || method === "eth_signTransaction") {
-              await assertChainMatch(provider, chainConfig);
+              await assertChainMatch(provider2, chainConfig);
             }
-            return await provider.request({ method, params });
+            return await provider2.request({ method, params });
           } catch (err) {
             console.warn(`Error using provider for method ${method}:`, err);
             throw err;
@@ -37799,100 +37799,167 @@ var createPublicClient2 = (chainConfig, customTransport) => {
   return createPublicClient({ chain: chainConfig, transport: customTransport });
 };
 
-// docs/app.mjs
-var ADDR = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F";
+// docs/wallet.mjs
+var provider = window.ethereum;
+var BRADBURY = {
+  chainId: "0x1a12",
+  chainName: "Bradbury Testnet",
+  rpcUrls: ["https://rpc-bradbury.genlayer.com"],
+  nativeCurrency: { name: "GEN", symbol: "GEN", decimals: 18 },
+  blockExplorerUrls: ["https://explorer-bradbury.genlayer.com"]
+};
+var CONTRACT_ADDRESS = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F";
 var client = null;
 var account = null;
-var isConnected = false;
+async function ensureBradbury() {
+  try {
+    await provider.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: BRADBURY.chainId }]
+    });
+    console.log("\u2705 Already on Bradbury");
+  } catch (err) {
+    if (err.code === 4902) {
+      await provider.request({
+        method: "wallet_addEthereumChain",
+        params: [BRADBURY]
+      });
+      await provider.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: BRADBURY.chainId }]
+      });
+      console.log("\u2705 Added & switched to Bradbury");
+    } else {
+      console.error("\u274C Switch failed:", err);
+      throw err;
+    }
+  }
+}
+async function connectWallet() {
+  const accounts = await provider.request({ method: "eth_requestAccounts" });
+  if (!accounts?.length) throw new Error("No accounts found");
+  account = accounts[0];
+  client = createClient2({ chain: testnetBradbury, account });
+  console.log("\u2705 Connected as", account);
+  return account;
+}
+async function openDispute(agent, serviceUrl, claim) {
+  if (!client || !account) throw new Error("Wallet not connected");
+  const minDepositWei = BigInt(0.2 * 10 ** 18);
+  const txHash = await client.writeContract({
+    address: CONTRACT_ADDRESS,
+    functionName: "open_dispute",
+    args: [agent, serviceUrl, claim],
+    value: minDepositWei
+  });
+  console.log("\u{1F4E1} Tx sent, hash:", txHash);
+  return txHash;
+}
+async function resolveDispute(disputeId) {
+  if (!client || !account) throw new Error("Wallet not connected");
+  const txHash = await client.writeContract({
+    address: CONTRACT_ADDRESS,
+    functionName: "resolve",
+    args: [disputeId]
+  });
+  console.log("\u{1F4E1} Tx sent, hash:", txHash);
+  return txHash;
+}
+async function getDispute(disputeId) {
+  if (!client || !account) throw new Error("Wallet not connected");
+  const result = await client.readContract({
+    address: CONTRACT_ADDRESS,
+    functionName: "get_dispute",
+    args: [disputeId]
+  });
+  return result;
+}
+provider.on("accountsChanged", (accounts) => {
+  if (accounts.length === 0) {
+    console.log("\u{1F50C} Wallet disconnected");
+    account = null;
+    client = null;
+  } else {
+    account = accounts[0];
+    if (client) {
+      client.account = account;
+    }
+  }
+});
+
+// docs/app.js
 var addrEl = document.getElementById("addr");
 var noteEl = document.getElementById("netNote");
 var btn = document.getElementById("connectBtn");
+var openBtn = document.getElementById("openBtn");
+var resolveBtn = document.getElementById("resolveBtn");
+var readBtn = document.getElementById("readBtn");
+var isConnected = false;
+function showStatus(id, type, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = "status show " + type;
+}
 btn.addEventListener("click", async () => {
-  if (isConnected) disconnectWallet();
-  else await connectWallet();
-});
-async function connectWallet() {
-  if (isConnected) return;
-  addrEl.textContent = "Connecting...";
+  if (isConnected) {
+    isConnected = false;
+    addrEl.textContent = "Not connected";
+    noteEl.textContent = "";
+    btn.textContent = "Connect Wallet";
+    return;
+  }
   try {
-    if (!window.ethereum) {
-      addrEl.textContent = "Wallet not detected";
-      return;
-    }
-    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-    if (!accounts?.length) throw new Error("No accounts found");
-    account = accounts[0];
-    client = createClient2({ chain: testnetBradbury, account });
-    isConnected = true;
-    addrEl.textContent = accounts[0].slice(0, 6) + "..." + accounts[0].slice(-4);
+    addrEl.textContent = "Connecting...";
+    await ensureBradbury();
+    const account2 = await connectWallet();
+    addrEl.textContent = account2.slice(0, 6) + "..." + account2.slice(-4);
     noteEl.innerHTML = '<span style="color:#4ade80">\u25CF Connected</span>';
     btn.textContent = "Disconnect";
-    console.log("Connected as", accounts[0]);
+    isConnected = true;
   } catch (e) {
     addrEl.textContent = "Failed: " + e.message;
+    noteEl.textContent = "";
     console.error("Connection error:", e);
   }
-}
-function disconnectWallet() {
-  client = null;
-  account = null;
-  isConnected = false;
-  addrEl.textContent = "Not connected";
-  noteEl.textContent = "";
-  btn.textContent = "Connect Wallet";
-  console.log("Disconnected");
-}
-window.openDispute = async function() {
-  if (!client || !account) return alert("Connect wallet first");
+});
+openBtn.addEventListener("click", async () => {
+  if (!isConnected) return showStatus("openStatus", "warn", "Connect wallet first");
   try {
-    showStatus("openStatus", "Opening dispute...");
-    const amountGen = document.getElementById("amount").value || "0";
-    const parts = amountGen.split(".");
-    const whole = parts[0] || "0";
-    let frac = parts[1] || "";
-    frac = frac.padEnd(18, "0").slice(0, 18);
-    const valueWei = BigInt(whole + frac);
-    const txHash = await client.writeContract({
-      address: ADDR,
-      functionName: "open_dispute",
-      args: [document.getElementById("agent").value, document.getElementById("service").value, document.getElementById("claim").value],
-      value: valueWei
-    });
+    showStatus("openStatus", "warn", "Opening dispute...");
+    const agent = document.getElementById("agent").value;
+    const serviceUrl = document.getElementById("service").value;
+    const claim = document.getElementById("claim").value;
+    const txHash = await openDispute(agent, serviceUrl, claim);
     showStatus("openStatus", "ok", "Opened! Tx: " + txHash);
   } catch (e) {
     showStatus("openStatus", "err", "Error: " + e.message);
+    console.error("Open dispute error:", e);
   }
-};
-window.resolve = async function() {
-  if (!client || !account) return alert("Connect wallet first");
+});
+resolveBtn.addEventListener("click", async () => {
+  if (!isConnected) return showStatus("resolveStatus", "warn", "Connect wallet first");
   try {
-    showStatus("resolveStatus", "Resolving with AI...");
-    const txHash = await client.writeContract({
-      address: ADDR,
-      functionName: "resolve",
-      args: [document.getElementById("disputeId").value]
-    });
+    showStatus("resolveStatus", "warn", "Resolving with AI...");
+    const disputeId = document.getElementById("disputeId").value;
+    const txHash = await resolveDispute(disputeId);
     showStatus("resolveStatus", "ok", "Resolved! Tx: " + txHash);
   } catch (e) {
     showStatus("resolveStatus", "err", "Error: " + e.message);
+    console.error("Resolve error:", e);
   }
-};
-window.read = async function() {
-  if (!client || !account) return alert("Connect wallet first");
+});
+readBtn.addEventListener("click", async () => {
+  if (!isConnected) return showStatus("out", "warn", "Connect wallet first");
   try {
-    const d = await client.readContract({
-      address: ADDR,
-      functionName: "get_dispute",
-      args: [document.getElementById("readId").value]
-    });
-    document.getElementById("out").textContent = JSON.stringify(d, null, 2);
+    const disputeId = document.getElementById("readId").value;
+    const result = await getDispute(disputeId);
+    document.getElementById("out").textContent = JSON.stringify(result, null, 2);
   } catch (e) {
     document.getElementById("out").textContent = "Error: " + e.message;
+    console.error("Read error:", e);
   }
-};
-function showStatus(id, msg) {
-  document.getElementById(id).textContent = msg;
-}
+});
+console.log("App initialized");
 /*! Bundled license information:
 
 @noble/hashes/esm/utils.js:
