@@ -181,8 +181,9 @@
         transport: custom(window.ethereum),
       });
 
-      const accounts = await client.getAddresses();
-      if (!accounts?.length) throw new Error('No accounts found');
+      // Request accounts explicitly
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      if (!accounts || accounts.length === 0) throw new Error('No accounts found. Please unlock Rabby.');
 
       account = { address: accounts[0] };
       isConnected = true;
