@@ -1,7 +1,15 @@
-import { createWalletClient, custom, http } from "viem";
-import { testnetBradbury } from "genlayer-js/chains";
+import { createWalletClient, custom, keccak256, encodeFunctionData, formatEther, parseEther } from "viem";
 
 const ADDR = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F";
+const RPC = "https://rpc-bradbury.genlayer.com";
+const CHAIN = {
+  id: 6675,
+  name: "GenLayer Bradbury Testnet",
+  rpcUrls: { default: { http: [RPC] } },
+  nativeCurrency: { name: "GEN", symbol: "GEN", decimals: 18 },
+  blockExplorers: { default: { name: "GenLayer Explorer", url: "https://explorer-bradbury.genlayer.com" } },
+};
+
 let client = null;
 let account = null;
 
@@ -13,9 +21,9 @@ window.connectWallet = async function() {
   try {
     if (!window.ethereum) { addrEl.textContent = "Wallet not detected"; return; }
     
-    // Create client using viem directly (bypasses genlayer-js snap check)
+    // Use viem directly (no genlayer-js, no snap required)
     client = createWalletClient({
-      chain: testnetBradbury,
+      chain: CHAIN,
       transport: custom(window.ethereum),
     });
     
@@ -36,54 +44,89 @@ window.connectWallet = async function() {
 window.openDispute = async function() {
   if (!client) return alert("Connect wallet first");
   try {
+    showStatus("openStatus", "Opening dispute...");
     const tx = await client.writeContract({
       address: ADDR,
-      abi: [{"type":"function","name":"open_dispute","inputs":[{"name":"agent","type":"address"},{"name":"service_url","type":"string"},{"name":"claim","type":"string"}],"outputs":[],"stateMutability":"payable"}],
+      abi: [{
+        type: "function",
+        name: "open_dispute",
+        inputs: [
+          { name: "agent", type: "address" },
+          { name: "service_url", type: "string" },
+          { name: "claim", type: "string" }
+        ],
+        outputs: [],
+        stateMutability: "payable"
+      }],
       functionName: "open_dispute",
-      args: [document.getElementById("agent").value, document.getElementById("service").value, document.getElementById("claim").value],
+      args: [
+        document.getElementById("agent").value,
+        document.getElementById("service").value,
+        document.getElementById("claim").value
+      ],
       value: BigInt(document.getElementById("amount").value || 0),
       account: account.address,
     });
-    document.getElementById("openStatus").innerHTML = '<span style="color:#4ade80">Opened! Tx: ' + tx + '</span>';
+    showStatus("openStatus", "Opened! Tx: " + tx);
   } catch(e) {
-    document.getElementById("openStatus").innerHTML = '<span style="color:#f87171">Error: ' + e.message + '</span>';
+    showStatus("openStatus", "Error: " + e.message);
   }
 };
 
 window.resolve = async function() {
   if (!client) return alert("Connect wallet first");
   try {
+    showStatus("resolveStatus", "Resolving with AI...");
     const tx = await client.writeContract({
       address: ADDR,
-      abi: [{"type":"function","name":"resolve","inputs":[{"name":"dispute_id","type":"string"}],"outputs":[],"stateMutability":"nonpayable"}],
+      abi: [{
+        type: "function",
+        name: "resolve",
+        inputs: [{ name: "dispute_id", type: "string" }],
+        outputs: [],
+        stateMutability: "nonpayable"
+      }],
       functionName: "resolve",
       args: [document.getElementById("disputeId").value],
       value: 0n,
       account: account.address,
     });
-    document.getElementById("resolveStatus").innerHTML = '<span style="color:#4ade80">Resolved! Tx: ' + tx + '</span>';
+    showStatus("resolveStatus", "Resolved! Tx: " + tx);
   } catch(e) {
-    document.getElementById("resolveStatus").innerHTML = '<span style="color:#f87171">Error: ' + e.message + '</span>';
+    showStatus("resolveStatus", "Error: " + e.message);
   }
 };
 
 window.read = async function() {
   if (!client) return alert("Connect wallet first");
   try {
-    // Use raw RPC call for reading
-    const response = await fetch(testnetBradbury.rpcUrls.default.http[0], {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "gen_getClaim",
-        params: [{ claimId: document.getElementById("readId").value }],
-      }),
+    const d = await client.readContract({
+      address: ADDR,
+      abi: [{
+        type: "function",
+        name: "get_dispute",
+        inputs: [{ name: "dispute_id", type: "string" }],
+        outputs: [
+          { name: "id", type: "string" },
+          { name: "payer", type: "address" },
+          { name: "agent", type: "address" },
+          { name: "amount", type: "uint256" },
+          { name: "service_url", type: "string" },
+          { name: "claim", type: "string" },
+          { name: "status", type: "string" },
+          { name: "verdict", type: "string" }
+        ],
+        stateMutability: "view"
+      }],
+      functionName: "get_dispute",
+      args: [document.getElementById("readId").value],
     });
-    const data = await response.json();
-    document.getElementById("out").textContent = JSON.stringify(data.result, null, 2);
+    document.getElementById("out").textContent = JSON.stringify(d, null, 2);
   } catch(e) {
     document.getElementById("out").textContent = "Error: " + e.message;
   }
 };
+
+function showStatus(id, msg) {
+  document.getElementById(id).textContent = msg;
+}
