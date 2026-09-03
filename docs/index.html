@@ -1,84 +1,497 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Agent Payment Adjudicator — Live</title>
-<style>
-  :root{--bg:#1c130c;--panel:#241810;--butter:#e8c98a;--butter-dim:#c9a86a;--text:#f3e7d3;--muted:#a08a6b;--green:#7bd88f;--red:#e08a7a;--line:#3a2a1a}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.55}
-  .wrap{max-width:760px;margin:0 auto;padding:28px 18px 60px}
-  header{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:24px}
-  .badge{display:inline-block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;background:var(--butter);color:var(--bg);padding:3px 10px;border-radius:999px;font-weight:700}
-  h1{font-size:26px;margin:12px 0 6px;color:var(--butter)}
-  .sub{color:var(--muted);font-size:14px}
-  h2{color:var(--butter);font-size:18px;margin:28px 0 10px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
-  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
-  input,textarea{width:100%;background:#15100a;border:1px solid var(--line);border-radius:8px;color:var(--text);padding:10px;font-size:14px;font-family:inherit}
-  button{margin-top:12px;background:var(--butter);color:var(--bg);border:0;border-radius:10px;padding:11px 16px;font-weight:700;font-size:14px;cursor:pointer}
-  button:disabled{opacity:.5;cursor:default}
-  pre{background:#15100a;border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;font-size:13px;color:var(--butter-dim);white-space:pre-wrap}
-  .status{margin-top:10px;font-size:13px;color:var(--muted)}
-  .ok{color:var(--green)} .err{color:var(--red)}
-  a{color:var(--butter)}
-  .walletbar{display:flex;align-items:center;gap:12px;margin:14px 0}
-  .addr{font-size:13px;color:var(--butter-dim)}
-  .note{font-size:12px;color:var(--muted);margin-top:8px}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agent Payment Adjudicator — GenLayer</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --panel-hover: #334155;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --radius: 12px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 24px 0;
+      margin-bottom: 32px;
+    }
+    
+    .header-content {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .brand-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: white;
+    }
+    
+    .brand-text h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    
+    .brand-text span {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    
+    /* Wallet Section */
+    .wallet-section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .wallet-info {
+      flex: 1;
+    }
+    
+    .wallet-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    
+    .wallet-address {
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+    
+    .wallet-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    /* Buttons */
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+    
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .btn-primary.connected {
+      background: var(--success);
+    }
+    
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    
+    .btn-outline:hover {
+      background: var(--panel-hover);
+    }
+    
+    /* Cards */
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+    
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .card-title .icon {
+      font-size: 1.2rem;
+    }
+    
+    /* Form Elements */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+    
+    .form-input, .form-textarea {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    
+    .form-input:focus, .form-textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    
+    .form-textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    
+    .form-input::placeholder, .form-textarea::placeholder {
+      color: var(--text-muted);
+      opacity: 0.5;
+    }
+    
+    /* Status Messages */
+    .status {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      margin-top: 16px;
+      display: none;
+    }
+    
+    .status.active { display: block; }
+    .status.success { background: rgba(34, 197, 94, 0.1); border: 1px solid var(--success); color: var(--success); }
+    .status.error { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); color: var(--danger); }
+    .status.warning { background: rgba(245, 158, 11, 0.1); border: 1px solid var(--warning); color: var(--warning); }
+    
+    /* Loading Spinner */
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .badge-success { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+    .badge-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+    .badge-info { background: rgba(59, 130, 246, 0.15); color: var(--primary); }
+    .badge-secondary { background: var(--panel-hover); color: var(--text-muted); }
+    
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      padding: 16px 24px;
+      border-radius: 8px;
+      font-weight: 500;
+      transform: translateX(120%);
+      transition: transform 0.3s ease;
+      z-index: 1000;
+      max-width: 400px;
+    }
+    
+    .toast.show { transform: translateX(0); }
+    .toast-info { background: var(--primary); color: white; }
+    .toast-success { background: var(--success); color: white; }
+    .toast-warning { background: var(--warning); color: #000; }
+    .toast-error { background: var(--danger); color: white; }
+    
+    /* Dispute Display */
+    .dispute-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    
+    .dispute-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .dispute-id {
+      font-family: 'SF Mono', Monaco, monospace;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    
+    .dispute-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    
+    .dispute-field {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    
+    .dispute-field.full-width {
+      grid-column: 1 / -1;
+    }
+    
+    .field-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .field-value {
+      font-size: 0.85rem;
+      color: var(--text);
+    }
+    
+    .field-value a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    
+    .field-value a:hover {
+      text-decoration: underline;
+    }
+    
+    /* Contract Info */
+    .contract-info {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+    
+    .contract-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    
+    .contract-link:hover {
+      background: var(--panel-hover);
+      border-color: var(--primary);
+    }
+    
+    /* Layout */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px 60px;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; }
+      .header-content { flex-direction: column; gap: 16px; }
+      .wallet-section { flex-direction: column; align-items: stretch; }
+    }
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <span class="badge">GenLayer Project</span>
-    <h1>Agent Payment Adjudicator</h1>
-    <p class="sub">Per-user wallet signing. You connect your own MetaMask (GenLayer testnet) wallet and sign every on-chain write yourself — this app holds no keys and never spends on your behalf.</p>
+  <header class="header">
+    <div class="header-content">
+      <div class="brand">
+        <div class="brand-icon">A</div>
+        <div class="brand-text">
+          <h1>Agent Payment Adjudicator</h1>
+          <span>GenLayer Intelligent Contract</span>
+        </div>
+      </div>
+      <a href="https://docs.genlayer.com" target="_blank" class="btn btn-outline">Docs ↗</a>
+    </div>
   </header>
 
-  <div class="walletbar">
-    <button id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
-    <span class="addr" id="addr">Not connected</span>
-  </div>
-  <div class="note" id="netNote"></div>
+  <main class="container">
+    <!-- Wallet Section -->
+    <div class="wallet-section">
+      <div class="wallet-info">
+        <div class="wallet-label">Wallet Status</div>
+        <div class="wallet-address" id="addr">Not connected</div>
+      </div>
+      <div class="wallet-status">
+        <button id="connectBtn" class="btn btn-primary" onclick="connectWallet()">
+          🔗 Connect Wallet
+        </button>
+      </div>
+    </div>
+    <div id="netNote" style="margin-top: -16px; margin-bottom: 24px;"></div>
 
-  <h2>Open a dispute</h2>
-  <div class="card">
-    <label>Agent address</label>
-    <input id="agent" placeholder="0x..." value="0x61fd0047595A30A067f1F21F3b28C4AE8A8e3Dc3" />
-    <label>Service URL (live evidence of delivery)</label>
-    <input id="service" placeholder="https://..." value="https://example.com/service-not-done" />
-    <label>Claim</label>
-    <textarea id="claim" placeholder="What went wrong">Agent did not deliver the agreed service.</textarea>
-    <label>Amount (GEN, deposited — paid from YOUR wallet)</label>
-    <input id="amount" placeholder="0" value="0" />
-    <button onclick="openDispute()">Open dispute (sign with your wallet)</button>
-    <div class="status" id="openStatus"></div>
-  </div>
+    <!-- Main Grid -->
+    <div class="grid">
+      <!-- Open Dispute -->
+      <div class="card">
+        <h2 class="card-title"><span class="icon">⚡</span> Open a Dispute</h2>
+        <div class="form-group">
+          <label class="form-label">Agent Address</label>
+          <input type="text" class="form-input" id="agent" placeholder="0x..." value="0x61fd0047595A30A067f1F21F3b28C4AE8A8e3Dc3" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Service URL (Live Evidence)</label>
+          <input type="text" class="form-input" id="service" placeholder="https://..." value="https://example.com/service-not-done" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Claim Description</label>
+          <textarea class="form-textarea" id="claim" placeholder="What went wrong?">Agent did not deliver the agreed service.</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Amount (GEN)</label>
+          <input type="number" class="form-input" id="amount" placeholder="0" value="0" />
+        </div>
+        <button class="btn btn-primary" onclick="openDispute()" style="width: 100%;">
+          Open Dispute →
+        </button>
+        <div id="openStatus" class="status"></div>
+      </div>
 
-  <h2>Resolve a dispute</h2>
-  <div class="card">
-    <label>Dispute ID</label>
-    <input id="disputeId" placeholder="DSP-0" value="DSP-0" />
-    <button onclick="resolve()">Trigger resolution (sign with your wallet)</button>
-    <div class="status" id="resolveStatus"></div>
-  </div>
+      <!-- Resolve Dispute -->
+      <div class="card">
+        <h2 class="card-title"><span class="icon">🤖</span> Resolve with AI</h2>
+        <div class="form-group">
+          <label class="form-label">Dispute ID</label>
+          <input type="text" class="form-input" id="disputeId" placeholder="DSP-0" value="DSP-0" />
+        </div>
+        <button class="btn btn-primary" onclick="resolve()" style="width: 100%; background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);">
+          Trigger AI Resolution →
+        </button>
+        <div id="resolveStatus" class="status"></div>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 12px;">
+          ⚡ AI validators will fetch the service URL and reach consensus on delivery.
+        </p>
+      </div>
+    </div>
 
-  <h2>Read dispute</h2>
-  <div class="card">
-    <label>Dispute ID</label>
-    <input id="readId" placeholder="DSP-0" value="DSP-0" />
-    <button onclick="read()">Get dispute</button>
-    <pre id="out">—</pre>
-  </div>
+    <!-- Read Dispute -->
+    <div class="card">
+      <h2 class="card-title"><span class="icon">📋</span> View Dispute</h2>
+      <div style="display: flex; gap: 12px; align-items: flex-end;">
+        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+          <label class="form-label">Dispute ID</label>
+          <input type="text" class="form-input" id="readId" placeholder="DSP-0" value="DSP-0" />
+        </div>
+        <button class="btn btn-outline" onclick="read()">Fetch</button>
+      </div>
+      <pre id="out" style="margin-top: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; font-size: 0.8rem; color: var(--text-muted); min-height: 100px;">—</pre>
+    </div>
 
-  <h2>Contract</h2>
-  <div class="card">
-    <p class="sub">Deployed: <a href="https://explorer-bradbury.genlayer.com/address/0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F" target="_blank">0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F</a> (Bradbury)</p>
-    <p class="sub">Contract source + tests: <a href="https://github.com/Adebisi1111/genlayer-adjudicator" target="_blank">github.com/Adebisi1111/genlayer-adjudicator</a></p>
-  </div>
-</div>
+    <!-- Contract Info -->
+    <div class="contract-info">
+      <a href="https://explorer-bradbury.genlayer.com/address/0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F" target="_blank" class="contract-link">
+        <span>📄</span>
+        <span>View Contract on GenLayer Explorer →</span>
+      </a>
+    </div>
+  </main>
 
-<script src="app.bundle.js"></script>
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+
+  <script type="module" src="app.mjs"></script>
 </body>
 </html>
