@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Diagnostic Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a2e; color: #eee; }
+    #log { background: #0f0f23; padding: 15px; border-radius: 8px; min-height: 300px; white-space: pre-wrap; font-size: 13px; }
+    .ok { color: #4ade80; }
+    .err { color: #f87171; }
+    .info { color: #60a5fa; }
+    button { padding: 10px 20px; font-size: 14px; cursor: pointer; margin: 10px 0; background: #3b82f6; color: white; border: none; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <h2>App Diagnostic Test</h2>
+  <button onclick="test1()">Test 1: Check MetaMask</button>
+  <button onclick="test2()">Test 2: Check Script Load</button>
+  <button onclick="test3()">Test 3: Check Function</button>
+  <div id="log"></div>
+
+<script type="module">
+import { createClient } from "genlayer-js";
+import { testnetBradbury } from "genlayer-js/chains";
+
+const log = (msg, cls = 'info') => {
+  document.getElementById('log').innerHTML += `<div class="${cls}">${msg}</div>`;
+};
+
+window.test1 = () => {
+  document.getElementById('log').innerHTML = '';
+  log('Checking MetaMask...');
+  if (window.ethereum) {
+    log('✅ window.ethereum exists', 'ok');
+    log('   Is MetaMask: ' + window.ethereum.isMetaMask, 'ok');
+  } else {
+    log('❌ window.ethereum NOT FOUND', 'err');
+    log('   Install MetaMask extension', 'err');
+  }
+};
+
+window.test2 = () => {
+  document.getElementById('log').innerHTML = '';
+  log('Checking script imports...');
+  try {
+    log('createClient: ' + typeof createClient, typeof createClient === 'function' ? 'ok' : 'err');
+    log('testnetBradbury: ' + typeof testnetBradbury, typeof testnetBradbury === 'object' ? 'ok' : 'err');
+    log('testnetBradbury.id: ' + (testnetBradbury?.id || 'undefined'), 'info');
+    log('testnetBradbury.name: ' + (testnetBradbury?.name || 'undefined'), 'info');
+  } catch(e) {
+    log('❌ Import error: ' + e.message, 'err');
+  }
+};
+
+window.test3 = () => {
+  document.getElementById('log').innerHTML = '';
+  log('Testing connectWallet flow...');
+  (async () => {
+    try {
+      log('Creating client...');
+      const client = createClient({ chain: testnetBradbury });
+      log('✅ Client created', 'ok');
+      
+      log('Connecting...');
+      const result = await client.connect('testnetBradbury');
+      log('✅ Connect result: ' + JSON.stringify(result), 'ok');
+      
+      if (!client.account) {
+        log('Requesting accounts...');
+        const [addr] = await window.ethereum.request({ method: "eth_requestAccounts" });
+        client.account = { address: addr };
+      }
+      
+      log('✅ Account: ' + client.account.address, 'ok');
+      log('\n🎉 ALL TESTS PASSED', 'ok');
+      
+    } catch(e) {
+      log('❌ ERROR: ' + e.message, 'err');
+      log('Stack: ' + e.stack, 'err');
+    }
+  })();
+};
+</script>
+</body>
+</html>
