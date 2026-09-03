@@ -135,22 +135,7 @@
         return;
       }
 
-      // Import viem dynamically
-      const { createWalletClient, custom } = await import('https://cdn.jsdelivr.net/npm/viem@2.28.0/+esm');
-      
-      const CHAIN = {
-        id: CHAIN_ID,
-        name: "GenLayer Bradbury Testnet",
-        rpcUrls: { default: { http: [RPC] } },
-        nativeCurrency: { name: "GEN", symbol: "GEN", decimals: 18 },
-      };
-
-      client = createWalletClient({
-        chain: CHAIN,
-        transport: custom(window.ethereum),
-      });
-
-      // Request accounts explicitly
+      // Request accounts directly (bypass viem chain validation)
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       if (!accounts || accounts.length === 0) throw new Error('No accounts found. Please unlock Rabby.');
 
@@ -191,23 +176,26 @@
 
   // Open dispute
   openBtn.addEventListener('click', async function() {
-    if (!client || !account) return showStatus('openStatus', 'warn', 'Connect wallet first');
+    if (!account) return showStatus('openStatus', 'warn', 'Connect wallet first');
     try {
       showStatus('openStatus', 'warn', 'Opening dispute...');
-      // Convert GEN to wei using string math (no floating point issues)
       const amountGen = document.getElementById('amount').value || '0';
       const parts = amountGen.split('.');
       const whole = parts[0] || '0';
       let frac = parts[1] || '';
       frac = frac.padEnd(18, '0').slice(0, 18);
       const valueWei = BigInt(whole + frac);
-      const tx = await client.writeContract({
-        address: ADDR,
-        abi: [{ type: "function", name: "open_dispute", inputs: [{ name: "agent", type: "address" }, { name: "service_url", type: "string" }, { name: "claim", type: "string" }], outputs: [], stateMutability: "payable" }],
-        functionName: "open_dispute",
-        args: [document.getElementById('agent').value, document.getElementById('service').value, document.getElementById('claim').value],
-        value: valueWei,
-        account: account.address,
+      
+      // Encode function call: open_dispute(address,string,string)
+      const selector = '0x' + Array.from('open_dispute(address,string,string)').reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0).toString(16).padStart(8, '0');
+      const tx = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: account.address,
+          to: ADDR,
+          data: selector,
+          value: '0x' + valueWei.toString(16),
+        }],
       });
       showStatus('openStatus', 'ok', 'Opened! Tx: ' + tx);
     } catch(e) {
@@ -217,16 +205,18 @@
 
   // Resolve dispute
   resolveBtn.addEventListener('click', async function() {
-    if (!client || !account) return showStatus('resolveStatus', 'warn', 'Connect wallet first');
+    if (!account) return showStatus('resolveStatus', 'warn', 'Connect wallet first');
     try {
       showStatus('resolveStatus', 'warn', 'Resolving with AI...');
-      const tx = await client.writeContract({
-        address: ADDR,
-        abi: [{ type: "function", name: "resolve", inputs: [{ name: "dispute_id", type: "string" }], outputs: [], stateMutability: "nonpayable" }],
-        functionName: "resolve",
-        args: [document.getElementById('disputeId').value],
-        value: 0n,
-        account: account.address,
+      const selector = '0x' + Array.from('resolve(string)').reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0).toString(16).padStart(8, '0');
+      const tx = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: account.address,
+          to: ADDR,
+          data: selector,
+          value: '0x0',
+        }],
       });
       showStatus('resolveStatus', 'ok', 'Resolved! Tx: ' + tx);
     } catch(e) {
@@ -236,15 +226,21 @@
 
   // Read dispute
   readBtn.addEventListener('click', async function() {
-    if (!client || !account) return showStatus('out', 'warn', 'Connect wallet first');
+    if (!account) return showStatus('out', 'warn', 'Connect wallet first');
     try {
-      const d = await client.readContract({
-        address: ADDR,
-        abi: [{ type: "function", name: "get_dispute", inputs: [{ name: "dispute_id", type: "string" }], outputs: [{ name: "id", type: "string" }, { name: "payer", type: "address" }, { name: "agent", type: "address" }, { name: "amount", type: "uint256" }, { name: "service_url", type: "string" }, { name: "claim", type: "string" }, { name: "status", type: "string" }, { name: "verdict", type: "string" }], stateMutability: "view" }],
-        functionName: "get_dispute",
-        args: [document.getElementById('readId').value],
+      // Use raw RPC call for reading
+      const response = await fetch(RPC, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'gen_getClaim',
+          params: [{ claimId: document.getElementById('readId').value }],
+        }),
       });
-      document.getElementById('out').textContent = JSON.stringify(d, null, 2);
+      const data = await response.json();
+      document.getElementById('out').textContent = JSON.stringify(data.result, null, 2);
     } catch(e) {
       document.getElementById('out').textContent = 'Error: ' + e.message;
     }
