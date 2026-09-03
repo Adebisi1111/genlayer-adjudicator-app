@@ -1,84 +1,69 @@
 import { createClient } from "genlayer-js";
 import { testnetBradbury } from "genlayer-js/chains";
 
-const ADJUDICATOR_ADDRESS = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F";
+const ADDR = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F";
 let client = null;
 let account = null;
 
-async function connectWallet(){
-  const b = document.getElementById('addr');
-  const note = document.getElementById('netNote');
+window.connectWallet = async function() {
+  const addrEl = document.getElementById("addr");
+  const noteEl = document.getElementById("netNote");
+  const btn = document.getElementById("connectBtn");
+  addrEl.textContent = "Connecting...";
   try {
-    if (!window.ethereum) throw new Error("MetaMask is not installed. Please install the MetaMask browser extension.");
-    client = createClient({ chain: testnetBradbury });
-    // genlayer-js native connect: installs GenLayer snap + sets Bradbury network
-    const snap = await client.connect('testnetBradbury');
-    // connect() sets client.account via the snap; if not, fall back to EIP-1193 address
-    if (!client.account) {
-      const [address] = await window.ethereum.request({ method: "eth_requestAccounts" });
-      client.account = { address };
-    }
-    const address = typeof client.account?.address === "string"
-      ? client.account.address
-      : (await window.ethereum.request({ method: "eth_accounts" }))[0];
-    account = client.account;
-    b.textContent = "Connected: " + address;
-    note.textContent = "Signing with your MetaMask wallet (GenLayer snap) on Bradbury testnet.";
-    document.getElementById('connectBtn').disabled = true;
-  } catch(e){
-    b.textContent = "Connect failed";
-    note.textContent = "Error: " + e.message;
+    if (!window.ethereum) { addrEl.textContent = "MetaMask not detected"; return; }
+    client = createClient({ chain: testnetBradbury, provider: window.ethereum });
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    if (!accounts?.length) throw new Error("No accounts found");
+    account = { address: accounts[0] };
+    client.account = account;
+    addrEl.textContent = accounts[0].slice(0,6) + "..." + accounts[0].slice(-4);
+    noteEl.innerHTML = '<span style="color:#4ade80">● Connected</span>';
+    btn.textContent = "Connected";
+    btn.disabled = true;
+  } catch(e) {
+    addrEl.textContent = "Failed: " + e.message;
+    noteEl.textContent = "";
   }
-}
+};
 
-function requireWallet(bar){
-  if(!client || !account){ bar.className='status err'; bar.textContent='Connect your wallet first.'; return false; }
-  return true;
-}
-
-async function openDispute(){
-  const b=document.getElementById('openStatus'); b.className='status'; b.textContent='Opening — confirm in MetaMask…';
-  if(!requireWallet(b)) return;
-  try{
-    const txHash = await client.writeContract({
-      address: ADJUDICATOR_ADDRESS,
+window.openDispute = async function() {
+  if (!client) return alert("Connect wallet first");
+  try {
+    const tx = await client.writeContract({
+      address: ADDR,
       functionName: "open_dispute",
-      args: [document.getElementById('agent').value,
-             document.getElementById('service').value,
-             document.getElementById('claim').value],
-      value: BigInt(document.getElementById('amount').value || 0),
+      args: [document.getElementById("agent").value, document.getElementById("service").value, document.getElementById("claim").value],
+      value: BigInt(document.getElementById("amount").value || 0),
     });
-    b.className='status ok'; b.textContent='Opened. Tx: '+txHash;
-  }catch(e){ b.className='status err'; b.textContent='Error: '+e.message; }
-}
+    document.getElementById("openStatus").innerHTML = '<span style="color:#4ade80">Opened! Tx: ' + tx + '</span>';
+  } catch(e) {
+    document.getElementById("openStatus").innerHTML = '<span style="color:#f87171">Error: ' + e.message + '</span>';
+  }
+};
 
-async function resolve(){
-  const b=document.getElementById('resolveStatus'); b.className='status'; b.textContent='Resolving — confirm in MetaMask…';
-  if(!requireWallet(b)) return;
-  try{
-    const txHash = await client.writeContract({
-      address: ADJUDICATOR_ADDRESS,
-      functionName: "resolve",
-      args: [document.getElementById('disputeId').value],
-      value: 0n,
+window.resolve = async function() {
+  if (!client) return alert("Connect wallet first");
+  try {
+    const tx = await client.writeContract({
+      address: ADDR, functionName: "resolve",
+      args: [document.getElementById("disputeId").value], value: 0n,
     });
-    b.className='status ok'; b.textContent='Resolved. Tx: '+txHash;
-  }catch(e){ b.className='status err'; b.textContent='Error: '+e.message; }
-}
+    document.getElementById("resolveStatus").innerHTML = '<span style="color:#4ade80">Resolved! Tx: ' + tx + '</span>';
+  } catch(e) {
+    document.getElementById("resolveStatus").innerHTML = '<span style="color:#f87171">Error: ' + e.message + '</span>';
+  }
+};
 
-async function read(){
-  const o=document.getElementById('out'); o.textContent='Reading…';
-  try{
-    const r=await fetch('/api/dispute/'+document.getElementById('readId').value);
-    const d=await r.json();
-    o.textContent=JSON.stringify(d,null,2);
-  }catch(e){o.textContent='Error: '+e;}
-}
-
-// expose handlers + client for inline onclick / testing
-window.connectWallet = connectWallet;
-window.openDispute = openDispute;
-window.resolve = resolve;
-window.read = read;
-window.__getClient = () => client;
-window.__getAccount = () => account;
+window.read = async function() {
+  if (!client) return alert("Connect wallet first");
+  try {
+    const d = await client.readContract({
+      address: ADDR, functionName: "get_dispute",
+      args: [document.getElementById("readId").value],
+    });
+    document.getElementById("out").textContent = JSON.stringify(d, null, 2);
+  } catch(e) {
+    document.getElementById("out").textContent = "Error: " + e.message;
+  }
+};

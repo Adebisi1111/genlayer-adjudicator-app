@@ -9058,13 +9058,13 @@ var init_getCallError = __esm({
 
 // node_modules/viem/_esm/utils/promise/withResolvers.js
 function withResolvers() {
-  let resolve2 = () => void 0;
+  let resolve = () => void 0;
   let reject = () => void 0;
   const promise = new Promise((resolve_, reject_) => {
-    resolve2 = resolve_;
+    resolve = resolve_;
     reject = reject_;
   });
-  return { promise, resolve: resolve2, reject };
+  return { promise, resolve, reject };
 }
 var init_withResolvers = __esm({
   "node_modules/viem/_esm/utils/promise/withResolvers.js"() {
@@ -9083,8 +9083,8 @@ function createBatchScheduler({ fn, id, shouldSplitBatch, wait: wait2 = 0, sort 
       if (sort && Array.isArray(data))
         data.sort(sort);
       for (let i = 0; i < scheduler.length; i++) {
-        const { resolve: resolve2 } = scheduler[i];
-        resolve2?.([data[i], data]);
+        const { resolve } = scheduler[i];
+        resolve?.([data[i], data]);
       }
     }).catch((err) => {
       for (let i = 0; i < scheduler.length; i++) {
@@ -9100,16 +9100,16 @@ function createBatchScheduler({ fn, id, shouldSplitBatch, wait: wait2 = 0, sort 
   return {
     flush,
     async schedule(args) {
-      const { promise, resolve: resolve2, reject } = withResolvers();
+      const { promise, resolve, reject } = withResolvers();
       const split2 = shouldSplitBatch?.([...getBatchedArgs(), args]);
       if (split2)
         exec();
       const hasActiveScheduler = getScheduler().length > 0;
       if (hasActiveScheduler) {
-        setScheduler({ args, resolve: resolve2, reject });
+        setScheduler({ args, resolve, reject });
         return promise;
       }
-      setScheduler({ args, resolve: resolve2, reject });
+      setScheduler({ args, resolve, reject });
       setTimeout(exec, wait2);
       return promise;
     }
@@ -11488,7 +11488,7 @@ function observe(observerId, callbacks, fn) {
 // node_modules/viem/_esm/utils/wait.js
 init_utils3();
 async function wait(time, { signal } = {}) {
-  return new Promise((resolve2, reject) => {
+  return new Promise((resolve, reject) => {
     if (signal?.aborted) {
       reject(getAbortError(signal));
       return;
@@ -11496,7 +11496,7 @@ async function wait(time, { signal } = {}) {
     const cleanup = () => signal?.removeEventListener("abort", onAbort);
     const timeout = setTimeout(() => {
       cleanup();
-      resolve2();
+      resolve();
     }, time);
     const onAbort = () => {
       clearTimeout(timeout);
@@ -12242,7 +12242,7 @@ init_withResolvers();
 // node_modules/viem/_esm/utils/promise/withRetry.js
 init_utils3();
 function withRetry(fn, { delay: delay_ = 100, retryCount = 2, shouldRetry: shouldRetry2 = () => true, signal } = {}) {
-  return new Promise((resolve2, reject) => {
+  return new Promise((resolve, reject) => {
     const attemptRetry = async ({ count = 0 } = {}) => {
       if (signal?.aborted) {
         reject(getAbortError(signal));
@@ -12262,7 +12262,7 @@ function withRetry(fn, { delay: delay_ = 100, retryCount = 2, shouldRetry: shoul
       };
       try {
         const data = await fn();
-        resolve2(data);
+        resolve(data);
       } catch (err) {
         if (signal?.aborted) {
           reject(getAbortError(signal));
@@ -12413,7 +12413,7 @@ async function sendCalls(client2, parameters) {
           results.push({ reason, status: "rejected" });
         }
         if (experimental_fallbackDelay > 0)
-          await new Promise((resolve2) => setTimeout(resolve2, experimental_fallbackDelay));
+          await new Promise((resolve) => setTimeout(resolve, experimental_fallbackDelay));
       }
       if (results.every((r) => r.status === "rejected"))
         throw results[0].reason;
@@ -12516,9 +12516,9 @@ async function waitForCallsStatus(client2, parameters) {
     throwOnFailure = false
   } = parameters;
   const observerId = stringify(["waitForCallsStatus", client2.uid, id]);
-  const { promise, resolve: resolve2, reject } = withResolvers();
+  const { promise, resolve, reject } = withResolvers();
   let timer;
-  const unobserve = observe(observerId, { resolve: resolve2, reject }, (emit) => {
+  const unobserve = observe(observerId, { resolve, reject }, (emit) => {
     const unpoll = poll(async () => {
       const done = (fn) => {
         clearTimeout(timer);
@@ -12900,13 +12900,13 @@ async function isImageUri(uri) {
     }
     if (!Object.hasOwn(globalThis, "Image"))
       return false;
-    return new Promise((resolve2) => {
+    return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        resolve2(true);
+        resolve(true);
       };
       img.onerror = () => {
-        resolve2(false);
+        resolve(false);
       };
       img.src = uri;
     });
@@ -17334,13 +17334,13 @@ async function waitForTransactionReceipt(client2, parameters) {
   let retrying = false;
   let _unobserve;
   let _unwatch;
-  const { promise, resolve: resolve2, reject } = withResolvers();
+  const { promise, resolve, reject } = withResolvers();
   const timer = timeout ? setTimeout(() => {
     _unwatch?.();
     _unobserve?.();
     reject(new WaitForTransactionReceiptTimeoutError({ hash: hash3 }));
   }, timeout) : void 0;
-  _unobserve = observe(observerId, { onReplaced, resolve: resolve2, reject }, async (emit) => {
+  _unobserve = observe(observerId, { onReplaced, resolve, reject }, async (emit) => {
     receipt = await getAction(client2, getTransactionReceipt, "getTransactionReceipt")({ hash: hash3 }).catch(() => void 0);
     if (receipt && confirmations <= 1) {
       clearTimeout(timer);
@@ -36577,7 +36577,7 @@ var transactionsConfig = {
   retries: 10
 };
 async function sleep(ms) {
-  return new Promise((resolve2) => setTimeout(resolve2, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 var FIELDS_TO_REMOVE = [
   "raw",
@@ -37799,98 +37799,75 @@ var createPublicClient2 = (chainConfig, customTransport) => {
   return createPublicClient({ chain: chainConfig, transport: customTransport });
 };
 
-// public/app.mjs
-var ADJUDICATOR_ADDRESS = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F";
+// docs/app.mjs
+var ADDR = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F";
 var client = null;
 var account = null;
-async function connectWallet() {
-  const b = document.getElementById("addr");
-  const note = document.getElementById("netNote");
+window.connectWallet = async function() {
+  const addrEl = document.getElementById("addr");
+  const noteEl = document.getElementById("netNote");
+  const btn = document.getElementById("connectBtn");
+  addrEl.textContent = "Connecting...";
   try {
-    if (!window.ethereum) throw new Error("MetaMask is not installed. Please install the MetaMask browser extension.");
-    client = createClient2({ chain: testnetBradbury });
-    const snap = await client.connect("testnetBradbury");
-    if (!client.account) {
-      const [address2] = await window.ethereum.request({ method: "eth_requestAccounts" });
-      client.account = { address: address2 };
+    if (!window.ethereum) {
+      addrEl.textContent = "MetaMask not detected";
+      return;
     }
-    const address = typeof client.account?.address === "string" ? client.account.address : (await window.ethereum.request({ method: "eth_accounts" }))[0];
-    account = client.account;
-    b.textContent = "Connected: " + address;
-    note.textContent = "Signing with your MetaMask wallet (GenLayer snap) on Bradbury testnet.";
-    document.getElementById("connectBtn").disabled = true;
+    client = createClient2({ chain: testnetBradbury, provider: window.ethereum });
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    if (!accounts?.length) throw new Error("No accounts found");
+    account = { address: accounts[0] };
+    client.account = account;
+    addrEl.textContent = accounts[0].slice(0, 6) + "..." + accounts[0].slice(-4);
+    noteEl.innerHTML = '<span style="color:#4ade80">\u25CF Connected</span>';
+    btn.textContent = "Connected";
+    btn.disabled = true;
   } catch (e) {
-    b.textContent = "Connect failed";
-    note.textContent = "Error: " + e.message;
+    addrEl.textContent = "Failed: " + e.message;
+    noteEl.textContent = "";
   }
-}
-function requireWallet(bar) {
-  if (!client || !account) {
-    bar.className = "status err";
-    bar.textContent = "Connect your wallet first.";
-    return false;
-  }
-  return true;
-}
-async function openDispute() {
-  const b = document.getElementById("openStatus");
-  b.className = "status";
-  b.textContent = "Opening \u2014 confirm in MetaMask\u2026";
-  if (!requireWallet(b)) return;
+};
+window.openDispute = async function() {
+  if (!client) return alert("Connect wallet first");
   try {
-    const txHash = await client.writeContract({
-      address: ADJUDICATOR_ADDRESS,
+    const tx = await client.writeContract({
+      address: ADDR,
       functionName: "open_dispute",
-      args: [
-        document.getElementById("agent").value,
-        document.getElementById("service").value,
-        document.getElementById("claim").value
-      ],
+      args: [document.getElementById("agent").value, document.getElementById("service").value, document.getElementById("claim").value],
       value: BigInt(document.getElementById("amount").value || 0)
     });
-    b.className = "status ok";
-    b.textContent = "Opened. Tx: " + txHash;
+    document.getElementById("openStatus").innerHTML = '<span style="color:#4ade80">Opened! Tx: ' + tx + "</span>";
   } catch (e) {
-    b.className = "status err";
-    b.textContent = "Error: " + e.message;
+    document.getElementById("openStatus").innerHTML = '<span style="color:#f87171">Error: ' + e.message + "</span>";
   }
-}
-async function resolve() {
-  const b = document.getElementById("resolveStatus");
-  b.className = "status";
-  b.textContent = "Resolving \u2014 confirm in MetaMask\u2026";
-  if (!requireWallet(b)) return;
+};
+window.resolve = async function() {
+  if (!client) return alert("Connect wallet first");
   try {
-    const txHash = await client.writeContract({
-      address: ADJUDICATOR_ADDRESS,
+    const tx = await client.writeContract({
+      address: ADDR,
       functionName: "resolve",
       args: [document.getElementById("disputeId").value],
       value: 0n
     });
-    b.className = "status ok";
-    b.textContent = "Resolved. Tx: " + txHash;
+    document.getElementById("resolveStatus").innerHTML = '<span style="color:#4ade80">Resolved! Tx: ' + tx + "</span>";
   } catch (e) {
-    b.className = "status err";
-    b.textContent = "Error: " + e.message;
+    document.getElementById("resolveStatus").innerHTML = '<span style="color:#f87171">Error: ' + e.message + "</span>";
   }
-}
-async function read() {
-  const o = document.getElementById("out");
-  o.textContent = "Reading\u2026";
+};
+window.read = async function() {
+  if (!client) return alert("Connect wallet first");
   try {
-    const r = await fetch("/api/dispute/" + document.getElementById("readId").value);
-    const d = await r.json();
-    o.textContent = JSON.stringify(d, null, 2);
+    const d = await client.readContract({
+      address: ADDR,
+      functionName: "get_dispute",
+      args: [document.getElementById("readId").value]
+    });
+    document.getElementById("out").textContent = JSON.stringify(d, null, 2);
   } catch (e) {
-    o.textContent = "Error: " + e;
+    document.getElementById("out").textContent = "Error: " + e.message;
   }
-}
-window.connectWallet = connectWallet;
-window.openDispute = openDispute;
-window.resolve = resolve;
-window.read = read;
-window.__getClient = () => client;
-window.__getAccount = () => account;
+};
 /*! Bundled license information:
 
 @noble/hashes/esm/utils.js:
