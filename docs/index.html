@@ -192,12 +192,15 @@
     if (!client || !account) return showStatus('openStatus', 'warn', 'Connect wallet first');
     try {
       showStatus('openStatus', 'warn', 'Opening dispute...');
+      const amountGen = document.getElementById('amount').value || '0';
+      // Convert GEN to wei (1 GEN = 10^18 wei)
+      const valueWei = BigInt(Math.floor(parseFloat(amountGen) * 1e18));
       const tx = await client.writeContract({
         address: ADDR,
         abi: [{ type: "function", name: "open_dispute", inputs: [{ name: "agent", type: "address" }, { name: "service_url", type: "string" }, { name: "claim", type: "string" }], outputs: [], stateMutability: "payable" }],
         functionName: "open_dispute",
         args: [document.getElementById('agent').value, document.getElementById('service').value, document.getElementById('claim').value],
-        value: BigInt(document.getElementById('amount').value || 0),
+        value: valueWei,
         account: account.address,
       });
       showStatus('openStatus', 'ok', 'Opened! Tx: ' + tx);
