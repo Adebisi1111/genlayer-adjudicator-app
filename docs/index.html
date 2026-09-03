@@ -192,9 +192,13 @@
     if (!client || !account) return showStatus('openStatus', 'warn', 'Connect wallet first');
     try {
       showStatus('openStatus', 'warn', 'Opening dispute...');
+      // Convert GEN to wei using string math (no floating point issues)
       const amountGen = document.getElementById('amount').value || '0';
-      // Convert GEN to wei (1 GEN = 10^18 wei)
-      const valueWei = BigInt(Math.floor(parseFloat(amountGen) * 1e18));
+      const parts = amountGen.split('.');
+      const whole = parts[0] || '0';
+      let frac = parts[1] || '';
+      frac = frac.padEnd(18, '0').slice(0, 18);
+      const valueWei = BigInt(whole + frac);
       const tx = await client.writeContract({
         address: ADDR,
         abi: [{ type: "function", name: "open_dispute", inputs: [{ name: "agent", type: "address" }, { name: "service_url", type: "string" }, { name: "claim", type: "string" }], outputs: [], stateMutability: "payable" }],
