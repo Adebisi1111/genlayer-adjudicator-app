@@ -12806,16 +12806,22 @@ btn.addEventListener("click", async () => {
   }
 });
 async function connectWallet() {
+  if (isConnected && client && account) {
+    console.log("\u2705 Already connected as", account.address);
+    return;
+  }
   addrEl.textContent = "Connecting...";
   try {
     if (!window.ethereum) {
       addrEl.textContent = "Wallet not detected";
       return;
     }
-    client = createWalletClient({
-      chain: CHAIN,
-      transport: custom(window.ethereum)
-    });
+    if (!client) {
+      client = createWalletClient({
+        chain: CHAIN,
+        transport: custom(window.ethereum)
+      });
+    }
     const accounts = await client.getAddresses();
     if (!accounts?.length) throw new Error("No accounts found");
     account = { address: accounts[0] };
@@ -12823,21 +12829,38 @@ async function connectWallet() {
     addrEl.textContent = accounts[0].slice(0, 6) + "..." + accounts[0].slice(-4);
     noteEl.innerHTML = '<span style="color:#4ade80">\u25CF Connected</span>';
     btn.textContent = "Disconnect";
+    console.log("\u2705 Connected as", accounts[0]);
+    window.ethereum.on("accountsChanged", handleAccountsChanged);
   } catch (e) {
     addrEl.textContent = "Failed: " + e.message;
     noteEl.textContent = "";
+    console.error("\u274C Connection error:", e);
+  }
+}
+function handleAccountsChanged(accounts) {
+  if (accounts.length === 0) {
+    console.log("\u{1F50C} Wallet disconnected");
+    disconnectWallet();
+  } else {
+    account = { address: accounts[0] };
+    addrEl.textContent = accounts[0].slice(0, 6) + "..." + accounts[0].slice(-4);
+    console.log("\u{1F504} Switched to", accounts[0]);
   }
 }
 function disconnectWallet() {
   client = null;
   account = null;
   isConnected = false;
+  if (window.ethereum) {
+    window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
+  }
   addrEl.textContent = "Not connected";
   noteEl.textContent = "";
   btn.textContent = "Connect Wallet";
+  console.log("\u{1F50C} Disconnected");
 }
 window.openDispute = async function() {
-  if (!client) return alert("Connect wallet first");
+  if (!client || !account) return alert("Connect wallet first");
   try {
     showStatus("openStatus", "Opening dispute...");
     const tx = await client.writeContract({
@@ -12860,7 +12883,7 @@ window.openDispute = async function() {
   }
 };
 window.resolve = async function() {
-  if (!client) return alert("Connect wallet first");
+  if (!client || !account) return alert("Connect wallet first");
   try {
     showStatus("resolveStatus", "Resolving with AI...");
     const tx = await client.writeContract({
@@ -12877,7 +12900,7 @@ window.resolve = async function() {
   }
 };
 window.read = async function() {
-  if (!client) return alert("Connect wallet first");
+  if (!client || !account) return alert("Connect wallet first");
   try {
     const d = await client.readContract({
       address: ADDR,
