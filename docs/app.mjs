@@ -13,6 +13,9 @@ const CHAIN = {
 let client = null;
 let account = null;
 
+// Initialize button click handler
+document.getElementById("connectBtn").addEventListener("click", connectWallet);
+
 window.connectWallet = async function() {
   const addrEl = document.getElementById("addr");
   const noteEl = document.getElementById("netNote");

@@ -12794,6 +12794,7 @@ var CHAIN = {
 };
 var client = null;
 var account = null;
+document.getElementById("connectBtn").addEventListener("click", connectWallet);
 window.connectWallet = async function() {
   const addrEl = document.getElementById("addr");
   const noteEl = document.getElementById("netNote");
