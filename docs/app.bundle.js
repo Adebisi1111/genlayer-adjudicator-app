@@ -12794,11 +12794,18 @@ var CHAIN = {
 };
 var client = null;
 var account = null;
-document.getElementById("connectBtn").addEventListener("click", connectWallet);
-window.connectWallet = async function() {
-  const addrEl = document.getElementById("addr");
-  const noteEl = document.getElementById("netNote");
-  const btn = document.getElementById("connectBtn");
+var isConnected = false;
+var addrEl = document.getElementById("addr");
+var noteEl = document.getElementById("netNote");
+var btn = document.getElementById("connectBtn");
+btn.addEventListener("click", async () => {
+  if (isConnected) {
+    disconnectWallet();
+  } else {
+    await connectWallet();
+  }
+});
+async function connectWallet() {
   addrEl.textContent = "Connecting...";
   try {
     if (!window.ethereum) {
@@ -12812,27 +12819,23 @@ window.connectWallet = async function() {
     const accounts = await client.getAddresses();
     if (!accounts?.length) throw new Error("No accounts found");
     account = { address: accounts[0] };
+    isConnected = true;
     addrEl.textContent = accounts[0].slice(0, 6) + "..." + accounts[0].slice(-4);
     noteEl.innerHTML = '<span style="color:#4ade80">\u25CF Connected</span>';
     btn.textContent = "Disconnect";
-    btn.disabled = false;
-    btn.onclick = disconnectWallet;
   } catch (e) {
     addrEl.textContent = "Failed: " + e.message;
     noteEl.textContent = "";
   }
-};
-window.disconnectWallet = function() {
+}
+function disconnectWallet() {
   client = null;
   account = null;
-  const addrEl = document.getElementById("addr");
-  const noteEl = document.getElementById("netNote");
-  const btn = document.getElementById("connectBtn");
+  isConnected = false;
   addrEl.textContent = "Not connected";
   noteEl.textContent = "";
   btn.textContent = "Connect Wallet";
-  btn.onclick = connectWallet;
-};
+}
 window.openDispute = async function() {
   if (!client) return alert("Connect wallet first");
   try {
@@ -12842,20 +12845,12 @@ window.openDispute = async function() {
       abi: [{
         type: "function",
         name: "open_dispute",
-        inputs: [
-          { name: "agent", type: "address" },
-          { name: "service_url", type: "string" },
-          { name: "claim", type: "string" }
-        ],
+        inputs: [{ name: "agent", type: "address" }, { name: "service_url", type: "string" }, { name: "claim", type: "string" }],
         outputs: [],
         stateMutability: "payable"
       }],
       functionName: "open_dispute",
-      args: [
-        document.getElementById("agent").value,
-        document.getElementById("service").value,
-        document.getElementById("claim").value
-      ],
+      args: [document.getElementById("agent").value, document.getElementById("service").value, document.getElementById("claim").value],
       value: BigInt(document.getElementById("amount").value || 0),
       account: account.address
     });
@@ -12870,13 +12865,7 @@ window.resolve = async function() {
     showStatus("resolveStatus", "Resolving with AI...");
     const tx = await client.writeContract({
       address: ADDR,
-      abi: [{
-        type: "function",
-        name: "resolve",
-        inputs: [{ name: "dispute_id", type: "string" }],
-        outputs: [],
-        stateMutability: "nonpayable"
-      }],
+      abi: [{ type: "function", name: "resolve", inputs: [{ name: "dispute_id", type: "string" }], outputs: [], stateMutability: "nonpayable" }],
       functionName: "resolve",
       args: [document.getElementById("disputeId").value],
       value: 0n,
@@ -12892,22 +12881,7 @@ window.read = async function() {
   try {
     const d = await client.readContract({
       address: ADDR,
-      abi: [{
-        type: "function",
-        name: "get_dispute",
-        inputs: [{ name: "dispute_id", type: "string" }],
-        outputs: [
-          { name: "id", type: "string" },
-          { name: "payer", type: "address" },
-          { name: "agent", type: "address" },
-          { name: "amount", type: "uint256" },
-          { name: "service_url", type: "string" },
-          { name: "claim", type: "string" },
-          { name: "status", type: "string" },
-          { name: "verdict", type: "string" }
-        ],
-        stateMutability: "view"
-      }],
+      abi: [{ type: "function", name: "get_dispute", inputs: [{ name: "dispute_id", type: "string" }], outputs: [{ name: "id", type: "string" }, { name: "payer", type: "address" }, { name: "agent", type: "address" }, { name: "amount", type: "uint256" }, { name: "service_url", type: "string" }, { name: "claim", type: "string" }, { name: "status", type: "string" }, { name: "verdict", type: "string" }], stateMutability: "view" }],
       functionName: "get_dispute",
       args: [document.getElementById("readId").value]
     });
