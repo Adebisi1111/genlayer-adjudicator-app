@@ -21,7 +21,6 @@ window.connectWallet = async function() {
   try {
     if (!window.ethereum) { addrEl.textContent = "Wallet not detected"; return; }
     
-    // Use viem directly (no genlayer-js, no snap required)
     client = createWalletClient({
       chain: CHAIN,
       transport: custom(window.ethereum),
@@ -33,12 +32,25 @@ window.connectWallet = async function() {
     account = { address: accounts[0] };
     addrEl.textContent = accounts[0].slice(0,6) + "..." + accounts[0].slice(-4);
     noteEl.innerHTML = '<span style="color:#4ade80">● Connected</span>';
-    btn.textContent = "Connected";
-    btn.disabled = true;
+    btn.textContent = "Disconnect";
+    btn.disabled = false;
+    btn.onclick = disconnectWallet;
   } catch(e) {
     addrEl.textContent = "Failed: " + e.message;
     noteEl.textContent = "";
   }
+};
+
+window.disconnectWallet = function() {
+  client = null;
+  account = null;
+  const addrEl = document.getElementById("addr");
+  const noteEl = document.getElementById("netNote");
+  const btn = document.getElementById("connectBtn");
+  addrEl.textContent = "Not connected";
+  noteEl.textContent = "";
+  btn.textContent = "Connect Wallet";
+  btn.onclick = connectWallet;
 };
 
 window.openDispute = async function() {
