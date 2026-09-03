@@ -37801,7 +37801,6 @@ var createPublicClient2 = (chainConfig, customTransport) => {
 
 // docs/app.mjs
 var ADDR = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F";
-var CHAIN = testnetBradbury;
 var client = null;
 var account = null;
 var isConnected = false;
@@ -37820,10 +37819,10 @@ async function connectWallet() {
       addrEl.textContent = "Wallet not detected";
       return;
     }
-    client = createClient2({ chain: CHAIN, provider: window.ethereum });
     const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
     if (!accounts?.length) throw new Error("No accounts found");
-    account = { address: accounts[0] };
+    account = accounts[0];
+    client = createClient2({ chain: testnetBradbury, account });
     isConnected = true;
     addrEl.textContent = accounts[0].slice(0, 6) + "..." + accounts[0].slice(-4);
     noteEl.innerHTML = '<span style="color:#4ade80">\u25CF Connected</span>';

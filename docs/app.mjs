@@ -2,13 +2,11 @@ import { createClient } from "genlayer-js";
 import { testnetBradbury } from "genlayer-js/chains";
 
 const ADDR = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F";
-const CHAIN = testnetBradbury;
 
 let client = null;
 let account = null;
 let isConnected = false;
 
-// DOM elements
 const addrEl = document.getElementById("addr");
 const noteEl = document.getElementById("netNote");
 const btn = document.getElementById("connectBtn");
@@ -26,13 +24,10 @@ async function connectWallet() {
       addrEl.textContent = "Wallet not detected";
       return;
     }
-
-    // Create GenLayer client with window.ethereum
-    client = createClient({ chain: CHAIN, provider: window.ethereum });
     const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
     if (!accounts?.length) throw new Error("No accounts found");
-    
-    account = { address: accounts[0] };
+    account = accounts[0];
+    client = createClient({ chain: testnetBradbury, account });
     isConnected = true;
     addrEl.textContent = accounts[0].slice(0,6) + "..." + accounts[0].slice(-4);
     noteEl.innerHTML = '<span style="color:#4ade80">● Connected</span>';
@@ -64,7 +59,6 @@ window.openDispute = async function() {
     let frac = parts[1] || "";
     frac = frac.padEnd(18, "0").slice(0, 18);
     const valueWei = BigInt(whole + frac);
-    
     const txHash = await client.writeContract({
       address: ADDR,
       functionName: "open_dispute",
