@@ -3,82 +3,246 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Agent Payment Adjudicator — Live</title>
+  <title>Agent Payment Adjudicator</title>
   <style>
-    :root{--bg:#1c130c;--panel:#241810;--butter:#e8c98a;--butter-dim:#c9a86a;--text:#f3e7d3;--muted:#a08a6b;--green:#7bd88f;--red:#e08a7a;--line:#3a2a1a}
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.55}
-    .wrap{max-width:760px;margin:0 auto;padding:28px 18px 60px}
-    header{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:24px}
-    .badge{display:inline-block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;background:var(--butter);color:var(--bg);padding:3px 10px;border-radius:999px;font-weight:700}
-    h1{font-size:26px;margin:12px 0 6px;color:var(--butter)}
-    .sub{color:var(--muted);font-size:14px}
-    h2{color:var(--butter);font-size:18px;margin:28px 0 10px}
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
-    label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
-    input,textarea{width:100%;background:#15100a;border:1px solid var(--line);border-radius:8px;color:var(--text);padding:10px;font-size:14px;font-family:inherit}
-    button{margin-top:12px;background:var(--butter);color:var(--bg);border:0;border-radius:10px;padding:11px 16px;font-weight:700;font-size:14px;cursor:pointer}
-    button:disabled{opacity:.5;cursor:default}
-    pre{background:#15100a;border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;font-size:13px;color:var(--butter-dim);white-space:pre-wrap}
-    .status{margin-top:10px;font-size:13px;color:var(--muted)}
-    .ok{color:var(--green)}.err{color:var(--red)}
-    a{color:var(--butter)}
-    .walletbar{display:flex;align-items:center;gap:12px;margin:14px 0}
-    .addr{font-size:13px;color:var(--butter-dim)}
-    .note{font-size:12px;color:var(--muted);margin-top:8px}
+    :root{--bg:#1c130c;--panel:#241810;--butter:#e8c98a;--text:#f3e7d3;--muted:#a08a6b;--green:#7bd88f;--red:#e08a7a;--line:#3a2a1a}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.55;padding:28px 18px}
+    .wrap{max-width:760px;margin:0 auto}
+    .hdr{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:24px}
+    .brand{display:flex;align-items:center;gap:14px}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:800}
+    h1{font-size:1.2rem}
+    .sub{font-size:0.75rem;color:var(--muted)}
+    .wallet{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;gap:16px}
+    .wallet-info{flex:1}
+    .wallet-info .lbl{font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+    .wallet-info .val{font-family:monospace;font-size:0.9rem}
+    .btn{padding:10px 20px;border-radius:8px;font-weight:600;font-size:0.875rem;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:8px;transition:all .2s}
+    .btn-primary{background:var(--butter);color:var(--bg)}
+    .btn-primary:hover:not(:disabled){transform:translateY(-1px)}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+    .btn-grad{background:linear-gradient(135deg,#8b5cf6,#3b82f6);color:#fff}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px;margin-bottom:20px}
+    .card h2{font-size:1rem;margin-bottom:16px}
+    .grp{margin-bottom:14px}
+    .grp label{display:block;font-size:0.8rem;color:var(--muted);margin-bottom:6px}
+    .grp input,.grp textarea{width:100%;padding:12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--text);font-size:0.9rem;font-family:inherit}
+    .grp textarea{min-height:70px;resize:vertical}
+    .status{margin-top:14px;padding:12px;border-radius:8px;font-size:0.85rem;display:none}
+    .status.show{display:block}
+    .status.ok{background:rgba(34,197,94,.1);border:1px solid var(--green);color:var(--green)}
+    .status.err{background:rgba(239,68,68,.1);border:1px solid var(--red);color:var(--red)}
+    .status.warn{background:rgba(245,158,11,.1);border:1px solid #f59e0b;color:#f59e0b}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    @media(max-width:768px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <span class="badge">GenLayer Project</span>
-    <h1>Agent Payment Adjudicator</h1>
-    <p class="sub">Per-user wallet signing. You connect your own MetaMask (GenLayer testnet) wallet and sign every on-chain write yourself — this app holds no keys and never spends on your behalf.</p>
-  </header>
-
-  <div class="walletbar">
-    <button id="connectBtn">Connect Wallet</button>
-    <span class="addr" id="addr">Not connected</span>
-  </div>
-  <div class="note" id="netNote"></div>
-
-  <h2>Open a dispute</h2>
-  <div class="card">
-    <label>Agent address</label>
-    <input id="agent" placeholder="0x..." value="0x61fd0047595A30A067f1F21F3b28C4AE8A8e3Dc3" />
-    <label>Service URL (live evidence of delivery)</label>
-    <input id="service" placeholder="https://..." value="https://example.com/service-not-done" />
-    <label>Claim</label>
-    <textarea id="claim" placeholder="What went wrong">Agent did not deliver the agreed service.</textarea>
-    <label>Amount (GEN, deposited — paid from YOUR wallet)</label>
-    <input id="amount" placeholder="0" value="0" />
-    <button onclick="openDispute()">Open dispute (sign with your wallet)</button>
-    <div class="status" id="openStatus"></div>
+  <div class="hdr">
+    <div class="brand">
+      <div class="logo">A</div>
+      <div>
+        <h1>Agent Payment Adjudicator</h1>
+        <span class="sub">GenLayer Bradbury Testnet</span>
+      </div>
+    </div>
+    <a href="https://docs.genlayer.com" target="_blank" class="btn btn-primary">Docs ↗</a>
   </div>
 
-  <h2>Resolve a dispute</h2>
-  <div class="card">
-    <label>Dispute ID</label>
-    <input id="disputeId" placeholder="DSP-0" value="DSP-0" />
-    <button onclick="resolve()">Trigger resolution (sign with your wallet)</button>
-    <div class="status" id="resolveStatus"></div>
+  <div class="wallet">
+    <div class="wallet-info">
+      <div class="lbl">Wallet Status</div>
+      <div class="val" id="addr">Not connected</div>
+    </div>
+    <button class="btn btn-primary" id="connectBtn">Connect Wallet</button>
+  </div>
+  <div id="netNote" style="margin-top:-16px;margin-bottom:24px;"></div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>⚡ Open a Dispute</h2>
+      <div class="grp"><label>Agent Address</label><input id="agent" value="0x61fd0047595A30A067f1F21F3b28C4AE8A8e3Dc3" /></div>
+      <div class="grp"><label>Service URL (Live Evidence)</label><input id="service" value="https://example.com/service-not-done" /></div>
+      <div class="grp"><label>Claim</label><textarea id="claim">Agent did not deliver the agreed service.</textarea></div>
+      <div class="grp"><label>Amount (GEN)</label><input id="amount" type="number" value="0" /></div>
+      <button class="btn btn-primary" id="openBtn" style="width:100%">Open Dispute →</button>
+      <div id="openStatus" class="status"></div>
+    </div>
+
+    <div class="card">
+      <h2>🤖 Resolve with AI</h2>
+      <div class="grp"><label>Dispute ID</label><input id="disputeId" value="DSP-0" /></div>
+      <button class="btn btn-grad" id="resolveBtn" style="width:100%">Trigger AI Resolution →</button>
+      <div id="resolveStatus" class="status"></div>
+      <p style="font-size:0.7rem;color:var(--muted);margin-top:12px">AI validators fetch the service URL and reach consensus</p>
+    </div>
   </div>
 
-  <h2>Read dispute</h2>
   <div class="card">
-    <label>Dispute ID</label>
-    <input id="readId" placeholder="DSP-0" value="DSP-0" />
-    <button onclick="read()">Get dispute</button>
-    <pre id="out">—</pre>
+    <h2>📋 View Dispute</h2>
+    <div style="display:flex;gap:12px;align-items:flex-end">
+      <div class="grp" style="flex:1;margin-bottom:0"><label>Dispute ID</label><input id="readId" value="DSP-0" /></div>
+      <button class="btn btn-primary" id="readBtn">Fetch</button>
+    </div>
+    <pre id="out" style="margin-top:16px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:16px;font-size:0.8rem;color:var(--muted);min-height:80px">—</pre>
   </div>
 
-  <h2>Contract</h2>
-  <div class="card">
-    <p class="sub">Deployed: <a href="https://explorer-bradbury.genlayer.com/address/0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F" target="_blank">0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F</a> (Bradbury)</p>
-    <p class="sub">Contract source + tests: <a href="https://github.com/Adebisi1111/genlayer-adjudicator" target="_blank">github.com/Adebisi1111/genlayer-adjudicator</a></p>
+  <div class="card" style="margin-top:20px">
+    <h2>Contract</h2>
+    <p style="font-size:0.85rem">Deployed: <a href="https://explorer-bradbury.genlayer.com/address/0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F" target="_blank" style="color:var(--butter)">0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F</a></p>
+    <p style="font-size:0.85rem">GitHub: <a href="https://github.com/Adebisi1111/genlayer-adjudicator-app" target="_blank" style="color:var(--butter)">View Source</a></p>
   </div>
 </div>
 
-<script type="module" src="app.bundle.js?v=2"></script>
+<script>
+(function() {
+  'use strict';
+
+  const ADDR = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F";
+  const RPC = "https://rpc-bradbury.genlayer.com";
+  const CHAIN_ID = 6675;
+
+  let client = null;
+  let account = null;
+  let isConnected = false;
+
+  // DOM elements
+  const addrEl = document.getElementById('addr');
+  const noteEl = document.getElementById('netNote');
+  const btn = document.getElementById('connectBtn');
+  const openBtn = document.getElementById('openBtn');
+  const resolveBtn = document.getElementById('resolveBtn');
+  const readBtn = document.getElementById('readBtn');
+
+  // Status display helper
+  function showStatus(id, type, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.className = 'status show ' + type;
+  }
+
+  // Connect wallet
+  async function connectWallet() {
+    if (isConnected) return;
+    
+    addrEl.textContent = 'Connecting...';
+    try {
+      if (!window.ethereum) {
+        addrEl.textContent = 'Wallet not detected';
+        return;
+      }
+
+      // Import viem dynamically
+      const { createWalletClient, custom } = await import('https://cdn.jsdelivr.net/npm/viem@2.28.0/+esm');
+      
+      const CHAIN = {
+        id: CHAIN_ID,
+        name: "GenLayer Bradbury Testnet",
+        rpcUrls: { default: { http: [RPC] } },
+        nativeCurrency: { name: "GEN", symbol: "GEN", decimals: 18 },
+      };
+
+      client = createWalletClient({
+        chain: CHAIN,
+        transport: custom(window.ethereum),
+      });
+
+      const accounts = await client.getAddresses();
+      if (!accounts?.length) throw new Error('No accounts found');
+
+      account = { address: accounts[0] };
+      isConnected = true;
+
+      addrEl.textContent = accounts[0].slice(0,6) + '...' + accounts[0].slice(-4);
+      noteEl.innerHTML = '<span style="color:#4ade80">● Connected</span>';
+      btn.textContent = 'Disconnect';
+
+      console.log('Connected as', accounts[0]);
+
+    } catch(e) {
+      addrEl.textContent = 'Failed: ' + e.message;
+      console.error('Connection error:', e);
+    }
+  }
+
+  // Disconnect wallet
+  function disconnectWallet() {
+    client = null;
+    account = null;
+    isConnected = false;
+    addrEl.textContent = 'Not connected';
+    noteEl.textContent = '';
+    btn.textContent = 'Connect Wallet';
+    console.log('Disconnected');
+  }
+
+  // Button click handler
+  btn.addEventListener('click', function() {
+    if (isConnected) {
+      disconnectWallet();
+    } else {
+      connectWallet();
+    }
+  });
+
+  // Open dispute
+  openBtn.addEventListener('click', async function() {
+    if (!client || !account) return showStatus('openStatus', 'warn', 'Connect wallet first');
+    try {
+      showStatus('openStatus', 'warn', 'Opening dispute...');
+      const tx = await client.writeContract({
+        address: ADDR,
+        abi: [{ type: "function", name: "open_dispute", inputs: [{ name: "agent", type: "address" }, { name: "service_url", type: "string" }, { name: "claim", type: "string" }], outputs: [], stateMutability: "payable" }],
+        functionName: "open_dispute",
+        args: [document.getElementById('agent').value, document.getElementById('service').value, document.getElementById('claim').value],
+        value: BigInt(document.getElementById('amount').value || 0),
+        account: account.address,
+      });
+      showStatus('openStatus', 'ok', 'Opened! Tx: ' + tx);
+    } catch(e) {
+      showStatus('openStatus', 'err', 'Error: ' + e.message);
+    }
+  });
+
+  // Resolve dispute
+  resolveBtn.addEventListener('click', async function() {
+    if (!client || !account) return showStatus('resolveStatus', 'warn', 'Connect wallet first');
+    try {
+      showStatus('resolveStatus', 'warn', 'Resolving with AI...');
+      const tx = await client.writeContract({
+        address: ADDR,
+        abi: [{ type: "function", name: "resolve", inputs: [{ name: "dispute_id", type: "string" }], outputs: [], stateMutability: "nonpayable" }],
+        functionName: "resolve",
+        args: [document.getElementById('disputeId').value],
+        value: 0n,
+        account: account.address,
+      });
+      showStatus('resolveStatus', 'ok', 'Resolved! Tx: ' + tx);
+    } catch(e) {
+      showStatus('resolveStatus', 'err', 'Error: ' + e.message);
+    }
+  });
+
+  // Read dispute
+  readBtn.addEventListener('click', async function() {
+    if (!client || !account) return showStatus('out', 'warn', 'Connect wallet first');
+    try {
+      const d = await client.readContract({
+        address: ADDR,
+        abi: [{ type: "function", name: "get_dispute", inputs: [{ name: "dispute_id", type: "string" }], outputs: [{ name: "id", type: "string" }, { name: "payer", type: "address" }, { name: "agent", type: "address" }, { name: "amount", type: "uint256" }, { name: "service_url", type: "string" }, { name: "claim", type: "string" }, { name: "status", type: "string" }, { name: "verdict", type: "string" }], stateMutability: "view" }],
+        functionName: "get_dispute",
+        args: [document.getElementById('readId').value],
+      });
+      document.getElementById('out').textContent = JSON.stringify(d, null, 2);
+    } catch(e) {
+      document.getElementById('out').textContent = 'Error: ' + e.message;
+    }
+  });
+
+  console.log('App initialized');
+})();
+</script>
 </body>
 </html>
