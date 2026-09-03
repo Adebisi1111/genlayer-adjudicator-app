@@ -12795,16 +12795,31 @@ var CHAIN = {
 var client = null;
 var account = null;
 var isConnected = false;
-var addrEl = document.getElementById("addr");
-var noteEl = document.getElementById("netNote");
-var btn = document.getElementById("connectBtn");
-btn.addEventListener("click", async () => {
-  if (isConnected) {
-    disconnectWallet();
-  } else {
-    await connectWallet();
+var addrEl;
+var noteEl;
+var btn;
+function init() {
+  addrEl = document.getElementById("addr");
+  noteEl = document.getElementById("netNote");
+  btn = document.getElementById("connectBtn");
+  if (!btn) {
+    console.error("connectBtn not found");
+    return;
   }
-});
+  btn.addEventListener("click", async () => {
+    if (isConnected) {
+      disconnectWallet();
+    } else {
+      await connectWallet();
+    }
+  });
+  console.log("App initialized");
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
 async function connectWallet() {
   if (isConnected && client && account) {
     console.log("\u2705 Already connected as", account.address);

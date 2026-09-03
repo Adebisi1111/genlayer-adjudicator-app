@@ -16,18 +16,37 @@ let account = null;
 let isConnected = false;
 
 // ─── DOM references ─────────────────────────────────────────────────
-const addrEl = document.getElementById("addr");
-const noteEl = document.getElementById("netNote");
-const btn = document.getElementById("connectBtn");
+let addrEl, noteEl, btn;
 
-// ─── Single click handler (checks state) ────────────────────────────
-btn.addEventListener("click", async () => {
-  if (isConnected) {
-    disconnectWallet();
-  } else {
-    await connectWallet();
+// ─── Initialize when DOM is ready ───────────────────────────────────
+function init() {
+  addrEl = document.getElementById("addr");
+  noteEl = document.getElementById("netNote");
+  btn = document.getElementById("connectBtn");
+
+  if (!btn) {
+    console.error("connectBtn not found");
+    return;
   }
-});
+
+  // ─── Single click handler (checks state) ────────────────────────────
+  btn.addEventListener("click", async () => {
+    if (isConnected) {
+      disconnectWallet();
+    } else {
+      await connectWallet();
+    }
+  });
+
+  console.log("App initialized");
+}
+
+// Run init when DOM is ready
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
 
 // ─── Connect (only when not connected) ──────────────────────────────
 async function connectWallet() {
