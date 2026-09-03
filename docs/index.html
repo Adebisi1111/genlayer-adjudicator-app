@@ -224,14 +224,22 @@
       frac = frac.padEnd(18, '0').slice(0, 18);
       const valueWei = BigInt(whole + frac);
       
-      // Encode function call: open_dispute(address,string,string)
-      const selector = '0x' + Array.from('open_dispute(address,string,string)').reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0).toString(16).padStart(8, '0');
+      // Import viem for ABI encoding
+      const { encodeFunctionData } = await import('https://cdn.jsdelivr.net/npm/viem@2.28.0/+esm');
+      
+      // Encode function call with arguments
+      const data = encodeFunctionData({
+        abi: [{ type: "function", name: "open_dispute", inputs: [{ name: "agent", type: "address" }, { name: "service_url", type: "string" }, { name: "claim", type: "string" }], outputs: [], stateMutability: "payable" }],
+        functionName: "open_dispute",
+        args: [document.getElementById('agent').value, document.getElementById('service').value, document.getElementById('claim').value],
+      });
+      
       const tx = await window.ethereum.request({
         method: 'eth_sendTransaction',
         params: [{
           from: account.address,
           to: ADDR,
-          data: selector,
+          data: data,
           value: '0x' + valueWei.toString(16),
         }],
       });
@@ -246,13 +254,22 @@
     if (!account) return showStatus('resolveStatus', 'warn', 'Connect wallet first');
     try {
       showStatus('resolveStatus', 'warn', 'Resolving with AI...');
-      const selector = '0x' + Array.from('resolve(string)').reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0).toString(16).padStart(8, '0');
+      // Import viem for ABI encoding
+      const { encodeFunctionData } = await import('https://cdn.jsdelivr.net/npm/viem@2.28.0/+esm');
+      
+      // Encode function call with arguments
+      const data = encodeFunctionData({
+        abi: [{ type: "function", name: "resolve", inputs: [{ name: "dispute_id", type: "string" }], outputs: [], stateMutability: "nonpayable" }],
+        functionName: "resolve",
+        args: [document.getElementById('disputeId').value],
+      });
+      
       const tx = await window.ethereum.request({
         method: 'eth_sendTransaction',
         params: [{
           from: account.address,
           to: ADDR,
-          data: selector,
+          data: data,
           value: '0x0',
         }],
       });
