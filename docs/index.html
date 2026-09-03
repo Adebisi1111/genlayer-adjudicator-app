@@ -137,7 +137,36 @@
 
       // Request accounts directly (bypass viem chain validation)
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      if (!accounts || accounts.length === 0) throw new Error('No accounts found. Please unlock Rabby.');
+      if (!accounts || accounts.length === 0) throw new Error('No accounts found. Please unlock wallet.');
+
+      // Auto-switch to Bradbury if needed
+      const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+      const currentId = parseInt(currentChainId, 16);
+      if (currentId !== CHAIN_ID) {
+        addrEl.textContent = 'Switching network...';
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x' + CHAIN_ID.toString(16) }],
+          });
+        } catch (switchError) {
+          // Chain not in wallet — add it automatically
+          if (switchError.code === 4902 || switchError.data?.originalError?.code === 4902) {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: '0x' + CHAIN_ID.toString(16),
+                chainName: 'GenLayer Bradbury Testnet',
+                rpcUrls: [RPC],
+                nativeCurrency: { name: 'GEN', symbol: 'GEN', decimals: 18 },
+                blockExplorerUrls: ['https://explorer-bradbury.genlayer.com'],
+              }],
+            });
+          } else {
+            throw switchError;
+          }
+        }
+      }
 
       account = { address: accounts[0] };
       isConnected = true;
@@ -182,7 +211,7 @@
     const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
     const currentId = parseInt(currentChainId, 16);
     if (currentId !== CHAIN_ID) {
-      showStatus('openStatus', 'err', 'Wrong network! Switch to GenLayer Bradbury Testnet (Chain ID: ' + CHAIN_ID + '). You are on chain ' + currentId);
+      showStatus('openStatus', 'err', 'Wrong network! Please switch to GenLayer Bradbury Testnet (Chain ID: ' + CHAIN_ID + ')');
       return;
     }
     
