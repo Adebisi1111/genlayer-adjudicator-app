@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Wallet Diagnostic</title>
+  <style>
+    body{font-family:monospace;padding:20px;background:#1a1a2e;color:#eee;max-width:800px;margin:0 auto}
+    h2{margin-top:0}
+    .btn{padding:10px 20px;font-size:14px;cursor:pointer;margin:10px 0;background:#3b82f6;color:#fff;border:none;border-radius:6px}
+    .btn:hover{background:#2563eb}
+    #log{background:#0f0f23;padding:15px;border-radius:8px;min-height:300px;white-space:pre-wrap;font-size:13px;margin-top:15px}
+    .ok{color:#4ade80}.err{color:#f87171}.info{color:#60a5fa}.warn{color:#facc15}
+  </style>
+</head>
+<body>
+  <h2>🔍 Wallet Diagnostic Tool</h2>
+  <p>Click the button below to detect your wallet and test the connection.</p>
+  <button class="btn" onclick="runDiagnostic()">Run Diagnostic</button>
+  <div id="log">Click the button to start...</div>
+
+<script type="module">
+import { createClient } from "genlayer-js";
+import { testnetBradbury } from "genlayer-js/chains";
+
+window.runDiagnostic = async function() {
+  const log = (msg, cls = 'info') => {
+    document.getElementById('log').innerHTML += `<div class="${cls}">${msg}</div>`;
+  };
+  
+  document.getElementById('log').innerHTML = '';
+  
+  try {
+    // Step 1: Check for any injected provider
+    log('=== Step 1: Detecting Wallet Provider ===', 'info');
+    
+    if (window.ethereum) {
+      log('✅ window.ethereum found', 'ok');
+      log('   isMetaMask: ' + window.ethereum.isMetaMask, window.ethereum.isMetaMask ? 'ok' : 'warn');
+      log('   isRabby: ' + window.ethereum.isRabby, window.ethereum.isRabby ? 'ok' : 'warn');
+      log('   isCoinbaseWallet: ' + window.ethereum.isCoinbaseWallet, 'info');
+      log('   providers: ' + (window.ethereum.providers ? window.ethereum.providers.length : 'N/A'), 'info');
+    } else {
+      log('❌ window.ethereum NOT FOUND', 'err');
+      log('   Make sure your wallet extension is unlocked', 'err');
+      return;
+    }
+    
+    // Step 2: Check available methods
+    log('\n=== Step 2: Checking Available Methods ===', 'info');
+    const methods = ['eth_requestAccounts', 'eth_accounts', 'eth_chainId', 'wallet_getSnaps', 'wallet_addEthereumChain', 'wallet_switchEthereumChain'];
+    for (const m of methods) {
+      const has = typeof window.ethereum.request === 'function';
+      log(`   ${m}: ${has ? '✅' : '❌'}`, has ? 'ok' : 'warn');
+    }
+    
+    // Step 3: Request accounts
+    log('\n=== Step 3: Requesting Accounts ===', 'info');
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    if (accounts && accounts.length > 0) {
+      log('✅ Accounts: ' + JSON.stringify(accounts), 'ok');
+    } else {
+      log('❌ No accounts returned', 'err');
+      return;
+    }
+    
+    // Step 4: Get chain ID
+    log('\n=== Step 4: Getting Chain ID ===', 'info');
+    const chainId = await window.ethereum.request({ method: "eth_chainId" });
+    log('   Chain ID: ' + chainId + ' (0x' + parseInt(chainId).toString(16) + ')', 'ok');
+    
+    // Step 5: Create GenLayer client
+    log('\n=== Step 5: Creating GenLayer Client ===', 'info');
+    const client = createClient({ chain: testnetBradbury, provider: window.ethereum });
+    log('✅ Client created', 'ok');
+    
+    // Step 6: Try to read from contract
+    log('\n=== Step 6: Reading from Contract ===', 'info');
+    const dispute = await client.readContract({
+      address: "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F",
+      functionName: "get_dispute",
+      args: ["DSP-0"],
+    });
+    log('✅ Read successful: ' + JSON.stringify(dispute), 'ok');
+    
+    log('\n🎉 ALL CHECKS PASSED!', 'ok');
+    log('\nYour wallet is working correctly with this app.', 'ok');
+    
+  } catch(e) {
+    log('\n❌ ERROR: ' + e.message, 'err');
+    log('Stack: ' + e.stack, 'err');
+    log('\n📋 Copy this error and send it to me so I can fix it.', 'warn');
+  }
+};
+</script>
+</body>
+</html>
