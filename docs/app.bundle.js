@@ -37808,7 +37808,7 @@ var BRADBURY = {
   nativeCurrency: { name: "GEN", symbol: "GEN", decimals: 18 },
   blockExplorerUrls: ["https://explorer-bradbury.genlayer.com"]
 };
-var CONTRACT_ADDRESS = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F";
+var CONTRACT_ADDRESS = "0x9d8712ce10a354044d6132b90C088f2677c43963";
 var client = null;
 var account = null;
 async function ensureBradbury() {

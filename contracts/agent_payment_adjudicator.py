@@ -39,7 +39,7 @@ class AgentPaymentAdjudicator(gl.Contract):
         self.disputes[dispute_id] = Dispute(
             id=dispute_id,
             payer=gl.message.sender_address.as_hex,
-            agent=Address(agent).as_hex,
+            agent=str(agent),  # Convert Address to string directly
             amount=gl.message.value,
             service_url=service_url,
             claim=claim,

@@ -14,7 +14,7 @@ const BRADBURY = {
 };
 
 // Contract config
-const CONTRACT_ADDRESS = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F";
+const CONTRACT_ADDRESS = "0x9d8712ce10a354044d6132b90C088f2677c43963";
 const abi = [
   {
     type: "function",
