@@ -37855,7 +37855,6 @@ async function ensureBradbury() {
       await window.ethereum.request({
         method: "wallet_switchEthereumChain",
         params: [{ chainId: "0x107d" }]
-        // 4221 in hex
       });
     } catch (err) {
       if (err.code === 4902) {

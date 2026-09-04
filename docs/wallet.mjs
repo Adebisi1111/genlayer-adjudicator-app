@@ -1,28 +1,30 @@
-// wallet.mjs - GenLayer SDK with browser wallet support
+// wallet.mjs - GenLayer SDK with browser wallet
 import { createClient } from "genlayer-js";
 import { testnetBradbury } from "genlayer-js/chains";
 
 const CONTRACT_ADDRESS = "0x9d8712ce10a354044d6132b90C088f2677c43963";
 
-// Create client with window.ethereum (browser wallet)
-// SDK automatically routes through Consensus Main Contract
+// Consensus Main Contract address (where all writes must go)
+const CONSENSUS_ADDRESS = "0x0112Bf6e83497965A5fdD6Dad1E447a6E004271D";
+
+// Create client with window.ethereum provider
 export const client = createClient({
   chain: testnetBradbury,
   provider: window.ethereum,
 });
 
-// Request accounts and set account on client
+// Request accounts
 export async function connectWallet() {
   const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
   if (!accounts?.length) throw new Error("No accounts found");
   
-  // Set account on client (triggers provider-based signing)
+  // Set account as string address (triggers provider-based signing)
   client.account = accounts[0];
   
   return accounts[0];
 }
 
-// Ensure wallet is on Bradbury
+// Ensure wallet is on Bradbury (chain ID 4221)
 export async function ensureBradbury() {
   const chainId = await window.ethereum.request({ method: "eth_chainId" });
   const currentId = parseInt(chainId, 16);
@@ -31,7 +33,7 @@ export async function ensureBradbury() {
     try {
       await window.ethereum.request({
         method: "wallet_switchEthereumChain",
-        params: [{ chainId: "0x107d" }], // 4221 in hex
+        params: [{ chainId: "0x107d" }],
       });
     } catch (err) {
       if (err.code === 4902) {
@@ -52,7 +54,7 @@ export async function ensureBradbury() {
   }
 }
 
-// Open dispute - SDK routes through Consensus Main Contract
+// Open dispute - SDK routes through Consensus Main Contract automatically
 export async function openDispute(agent, serviceUrl, claim, value = 100n) {
   return client.writeContract({
     address: CONTRACT_ADDRESS,
