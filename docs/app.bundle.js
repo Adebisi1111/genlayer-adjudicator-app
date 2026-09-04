@@ -37874,12 +37874,18 @@ async function ensureBradbury() {
     }
   }
 }
-async function openDispute(agent, serviceUrl, claim, value = 100n) {
+async function openDispute(agent, serviceUrl, claim, value = "0") {
+  const valueStr = value.toString();
+  const parts = valueStr.split(".");
+  const whole = parts[0] || "0";
+  let frac = parts[1] || "";
+  frac = frac.padEnd(18, "0").slice(0, 18);
+  const valueWei = BigInt(whole + frac);
   return client.writeContract({
     address: CONTRACT_ADDRESS,
     functionName: "open_dispute",
     args: [agent, serviceUrl, claim],
-    value: BigInt(value)
+    value: valueWei
   });
 }
 async function resolveDispute(disputeId) {
