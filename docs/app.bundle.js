@@ -37838,26 +37838,15 @@ var createPublicClient2 = (chainConfig, customTransport) => {
 // docs/wallet.mjs
 var CONTRACT_ADDRESS = "0x9d8712ce10a354044d6132b90C088f2677c43963";
 var client = null;
-var currentAccount = null;
-function getClient() {
-  if (!client || !currentAccount) {
-    client = createClient2({
-      chain: testnetBradbury,
-      provider: window.ethereum,
-      account: currentAccount
-    });
-  }
-  return client;
-}
 async function connectWallet() {
   const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
   if (!accounts?.length) throw new Error("No accounts found");
-  currentAccount = accounts[0];
   client = createClient2({
     chain: testnetBradbury,
     provider: window.ethereum,
-    account: currentAccount
+    account: accounts[0]
   });
+  client.account = accounts[0];
   return accounts[0];
 }
 async function ensureBradbury() {
@@ -37894,7 +37883,7 @@ async function openDispute(agent, serviceUrl, claim, value = "0") {
   let frac = parts[1] || "";
   frac = frac.padEnd(18, "0").slice(0, 18);
   const valueWei = BigInt(whole + frac);
-  return getClient().writeContract({
+  return client.writeContract({
     address: CONTRACT_ADDRESS,
     functionName: "open_dispute",
     args: [agent, serviceUrl, claim],
@@ -37902,14 +37891,14 @@ async function openDispute(agent, serviceUrl, claim, value = "0") {
   });
 }
 async function resolveDispute(disputeId) {
-  return getClient().writeContract({
+  return client.writeContract({
     address: CONTRACT_ADDRESS,
     functionName: "resolve",
     args: [disputeId]
   });
 }
 async function getDispute(disputeId) {
-  return getClient().readContract({
+  return client.readContract({
     address: CONTRACT_ADDRESS,
     functionName: "get_dispute",
     args: [disputeId]
