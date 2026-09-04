@@ -7,9 +7,26 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "cors": "^2.8.6",
     "esbuild": "^0.28.2",
-    "express": "^4.21.2",
-    "genlayer-js": "1.1.8",
-    "viem": "^2.37.2"
-  }
+    "express": "^4.22.2",
+    "genlayer-js": "^1.1.8",
+    "viem": "^2.56.3"
+  },
+  "main": "server.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Adebisi1111/genlayer-adjudicator-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Adebisi1111/genlayer-adjudicator-app/issues"
+  },
+  "homepage": "https://github.com/Adebisi1111/genlayer-adjudicator-app#readme"
 }

@@ -1,41 +1,102 @@
-// GenLayer Project: Agent Payment Adjudicator — interactive app (OPTION A: per-user wallet signing).
-//
-// SECURITY MODEL (per GenLayer Portal steward review):
-//   This server holds NO private keys and signs NOTHING. It is a stateless
-//   read-only relay + static file host. All on-chain WRITES (open_dispute,
-//   resolve) are signed in the user's own browser via genlayer-js + MetaMask
-//   (see public/index.html). The browser user is the on-chain payer, so no
-//   unauthenticated endpoint can spend a backend wallet's value.
-//
-// The only state-touching endpoint is /api/dispute/:id, which performs a
-// read-only view call (get_dispute) and never sends value or signs.
+// server.js - GenLayer Backend Server
+// Routes transactions through the Consensus Main Contract automatically
 
 import express from "express";
+import cors from "cors";
 import { createClient } from "genlayer-js";
 import { testnetBradbury } from "genlayer-js/chains";
-
-// Read-only client — no account attached, so it can never sign or send value.
-const client = createClient({ chain: testnetBradbury });
+import { privateKeyToAccount } from "viem/accounts";
 
 const app = express();
+app.use(cors());
 app.use(express.json());
-app.use(express.static("public"));
 
-// Read a dispute (view only — no account, no value, no signing).
-app.get("/api/dispute/:id", async (req, res) => {
+// ─── Configuration ──────────────────────────────────────────────
+const CONTRACT_ADDRESS = "0x9d8712ce10a354044d6132b90C088f2677c43963";
+const PRIVATE_KEY = "0x023d076ab40ea46c59ac7ca7cecfaa2db5fa10b7a481aef27cf68e9cc5a8c0af";
+
+// ─── GenLayer Client (auto-routes through Consensus Main Contract) ──
+const account = privateKeyToAccount(PRIVATE_KEY);
+
+const client = createClient({
+  chain: testnetBradbury,
+  account,
+});
+
+console.log("Backend server started");
+console.log("Account:", account.address);
+console.log("Contract:", CONTRACT_ADDRESS);
+
+// ─── Routes ─────────────────────────────────────────────────────
+
+// Health check
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", account: account.address });
+});
+
+// Open dispute
+app.post("/open-dispute", async (req, res) => {
   try {
-    const result = await client.readContract({
-      address: ADJUDICATOR_ADDRESS,
-      functionName: "get_dispute",
-      args: [req.params.id],
+    const { agent, serviceUrl, claim, value } = req.body;
+
+    if (!agent || !serviceUrl || !claim) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const txHash = await client.writeContract({
+      address: CONTRACT_ADDRESS,
+      functionName: "open_dispute",
+      args: [agent, serviceUrl, claim],
+      value: value ? BigInt(value) : 0n,
     });
-    res.json({ dispute: result });
+
+    res.json({ success: true, txHash });
   } catch (e) {
-    res.status(500).json({ error: String(e) });
+    console.error("Open dispute error:", e);
+    res.status(500).json({ error: e.message });
   }
 });
 
-const ADJUDICATOR_ADDRESS = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F"; // deployed adjudicator (corrected consensus, project instance)
+// Resolve dispute
+app.post("/resolve", async (req, res) => {
+  try {
+    const { disputeId } = req.body;
 
+    if (!disputeId) {
+      return res.status(400).json({ error: "Missing disputeId" });
+    }
+
+    const txHash = await client.writeContract({
+      address: CONTRACT_ADDRESS,
+      functionName: "resolve",
+      args: [disputeId],
+    });
+
+    res.json({ success: true, txHash });
+  } catch (e) {
+    console.error("Resolve error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Get dispute (read)
+app.get("/dispute/:id", async (req, res) => {
+  try {
+    const result = await client.readContract({
+      address: CONTRACT_ADDRESS,
+      functionName: "get_dispute",
+      args: [req.params.id],
+    });
+
+    res.json({ success: true, data: result });
+  } catch (e) {
+    console.error("Get dispute error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Start Server ───────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Adjudicator app (read-only relay) on http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
