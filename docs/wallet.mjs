@@ -90,13 +90,13 @@ export async function connectWallet() {
 export async function openDispute(agent, serviceUrl, claim) {
   if (!client || !account) throw new Error("Wallet not connected");
 
-  const minDepositWei = BigInt(0.2 * 10 ** 18);
-
+  // Use a small value matching the test (100, not 0.2 GEN in wei)
+  // GenLayer's msg.value might not use 18-decimal wei
   const txHash = await client.writeContract({
     address: CONTRACT_ADDRESS,
     functionName: "open_dispute",
     args: [agent, serviceUrl, claim],
-    value: minDepositWei,
+    value: 100n,
   });
 
   console.log("📡 Tx sent, hash:", txHash);
