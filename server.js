@@ -1,5 +1,5 @@
-// server.js - GenLayer Backend Server
-// Routes transactions through the Consensus Main Contract automatically
+// server.js - GenLayer Backend Relay Server
+// Signs transactions with private key and routes through Consensus Main Contract
 
 import express from "express";
 import cors from "cors";
@@ -13,9 +13,15 @@ app.use(express.json());
 
 // ─── Configuration ──────────────────────────────────────────────
 const CONTRACT_ADDRESS = "0x9d8712ce10a354044d6132b90C088f2677c43963";
-const PRIVATE_KEY = "0x023d076ab40ea46c59ac7ca7cecfaa2db5fa10b7a481aef27cf68e9cc5a8c0af";
+const PRIVATE_KEY = process.env.SERVER_PRIVATE_KEY;
+const RPC_URL = process.env.GENLAYER_RPC || "https://rpc-bradbury.genlayer.com";
 
-// ─── GenLayer Client (auto-routes through Consensus Main Contract) ──
+if (!PRIVATE_KEY) {
+  console.error("SERVER_PRIVATE_KEY environment variable is required");
+  process.exit(1);
+}
+
+// ─── GenLayer Client (signs with private key) ───────────────────
 const account = privateKeyToAccount(PRIVATE_KEY);
 
 const client = createClient({
@@ -23,7 +29,7 @@ const client = createClient({
   account,
 });
 
-console.log("Backend server started");
+console.log("Backend relay server started");
 console.log("Account:", account.address);
 console.log("Contract:", CONTRACT_ADDRESS);
 
@@ -43,11 +49,19 @@ app.post("/open-dispute", async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    // Convert decimal GEN to wei
+    const valueStr = (value || "0").toString();
+    const parts = valueStr.split(".");
+    const whole = parts[0] || "0";
+    let frac = parts[1] || "";
+    frac = frac.padEnd(18, "0").slice(0, 18);
+    const valueWei = BigInt(whole + frac);
+
     const txHash = await client.writeContract({
       address: CONTRACT_ADDRESS,
       functionName: "open_dispute",
       args: [agent, serviceUrl, claim],
-      value: value ? BigInt(value) : 0n,
+      value: valueWei,
     });
 
     res.json({ success: true, txHash });

@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: genlayer-adjudicator-relay
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: SERVER_PRIVATE_KEY
+        sync: false
+      - key: GENLAYER_RPC
+        value: https://rpc-bradbury.genlayer.com
