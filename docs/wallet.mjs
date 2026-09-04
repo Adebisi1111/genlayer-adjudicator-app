@@ -4,22 +4,34 @@ import { testnetBradbury } from "genlayer-js/chains";
 
 const CONTRACT_ADDRESS = "0x9d8712ce10a354044d6132b90C088f2677c43963";
 
-// Consensus Main Contract address (where all writes must go)
-const CONSENSUS_ADDRESS = "0x0112Bf6e83497965A5fdD6Dad1E447a6E004271D";
+let client = null;
+let currentAccount = null;
 
-// Create client with window.ethereum provider
-export const client = createClient({
-  chain: testnetBradbury,
-  provider: window.ethereum,
-});
+// Get or create client with current account
+function getClient() {
+  if (!client || !currentAccount) {
+    client = createClient({
+      chain: testnetBradbury,
+      provider: window.ethereum,
+      account: currentAccount,
+    });
+  }
+  return client;
+}
 
 // Request accounts
 export async function connectWallet() {
   const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
   if (!accounts?.length) throw new Error("No accounts found");
   
-  // Set account as string address (triggers provider-based signing)
-  client.account = accounts[0];
+  currentAccount = accounts[0];
+  
+  // Create new client with account
+  client = createClient({
+    chain: testnetBradbury,
+    provider: window.ethereum,
+    account: currentAccount,
+  });
   
   return accounts[0];
 }
@@ -64,7 +76,7 @@ export async function openDispute(agent, serviceUrl, claim, value = "0") {
   frac = frac.padEnd(18, "0").slice(0, 18);
   const valueWei = BigInt(whole + frac);
   
-  return client.writeContract({
+  return getClient().writeContract({
     address: CONTRACT_ADDRESS,
     functionName: "open_dispute",
     args: [agent, serviceUrl, claim],
@@ -74,7 +86,7 @@ export async function openDispute(agent, serviceUrl, claim, value = "0") {
 
 // Resolve dispute
 export async function resolveDispute(disputeId) {
-  return client.writeContract({
+  return getClient().writeContract({
     address: CONTRACT_ADDRESS,
     functionName: "resolve",
     args: [disputeId],
@@ -83,7 +95,7 @@ export async function resolveDispute(disputeId) {
 
 // Get dispute (read)
 export async function getDispute(disputeId) {
-  return client.readContract({
+  return getClient().readContract({
     address: CONTRACT_ADDRESS,
     functionName: "get_dispute",
     args: [disputeId],

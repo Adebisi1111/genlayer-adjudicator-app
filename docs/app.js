@@ -1,5 +1,5 @@
 // Main app.js - UI interactions
-import { client, connectWallet, ensureBradbury, openDispute, resolveDispute, getDispute } from "./wallet.mjs";
+import { connectWallet, ensureBradbury, openDispute, resolveDispute, getDispute } from "./wallet.mjs";
 
 // DOM elements
 const addrEl = document.getElementById("addr");
