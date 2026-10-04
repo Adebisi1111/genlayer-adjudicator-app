@@ -39,7 +39,14 @@ class AgentPaymentAdjudicator(gl.Contract):
         self.disputes[dispute_id] = Dispute(
             id=dispute_id,
             payer=gl.message.sender_address.as_hex,
-            agent=str(agent),  # Convert Address to string directly
+            # `.as_hex`, NOT `str(agent)`. Both fields are declared `str`, so a
+            # raw Address stringifies to its bytes repr - "b'\x81\xb6...'".
+            # That survives storage and comes back as that same literal text,
+            # which is not valid base64, so Address() raises on read-back and
+            # `resolve` dies before paying anyone. The payer field was already
+            # correct, which is why refunds worked and agent payouts never did:
+            # in that branch the deposit was unreachable and locked forever.
+            agent=Address(agent).as_hex,
             amount=gl.message.value,
             service_url=service_url,
             claim=claim,
