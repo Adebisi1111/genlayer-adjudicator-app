@@ -992,7 +992,7 @@ var init_size = __esm({
 var version2;
 var init_version2 = __esm({
   "node_modules/viem/_esm/errors/version.js"() {
-    version2 = "2.55.16";
+    version2 = "2.56.3";
   }
 });
 
@@ -1563,7 +1563,7 @@ function hexToBigInt(hex, opts = {}) {
   const value = BigInt(hex);
   if (!signed)
     return value;
-  const size5 = (hex.length - 2) / 2;
+  const size5 = Math.ceil((hex.length - 2) / 2);
   const max = (1n << BigInt(size5) * 8n - 1n) - 1n;
   if (value <= max)
     return value;
@@ -3597,12 +3597,23 @@ function prettyPrint(args) {
   const maxLength = entries.reduce((acc, [key]) => Math.max(acc, key.length), 0);
   return entries.map(([key, value]) => `  ${`${key}:`.padEnd(maxLength + 1)}  ${value}`).join("\n");
 }
-var InvalidSerializableTransactionError, TransactionExecutionError, TransactionNotFoundError, TransactionReceiptNotFoundError, TransactionReceiptRevertedError, WaitForTransactionReceiptTimeoutError;
+var FeePayerNonceMismatchError, InvalidSerializableTransactionError, TransactionExecutionError, TransactionNotFoundError, TransactionReceiptNotFoundError, TransactionReceiptRevertedError, WaitForTransactionReceiptTimeoutError;
 var init_transaction = __esm({
   "node_modules/viem/_esm/errors/transaction.js"() {
     init_formatEther();
     init_formatGwei();
     init_base();
+    FeePayerNonceMismatchError = class extends BaseError2 {
+      constructor({ filledNonce, requestedNonce }) {
+        super("The filled transaction nonce does not match the requested nonce.", {
+          metaMessages: [
+            `Requested Nonce: ${requestedNonce}`,
+            `Filled Nonce: ${filledNonce}`
+          ],
+          name: "FeePayerNonceMismatchError"
+        });
+      }
+    };
     InvalidSerializableTransactionError = class extends BaseError2 {
       constructor({ transaction }) {
         super("Cannot infer a transaction type from provided transaction.", {
@@ -10368,15 +10379,15 @@ async function internal_estimateFeesPerGas(client2, args) {
   const multiply = (base) => base * BigInt(Math.round(baseFeeMultiplier * denominator)) / BigInt(denominator);
   const block = block_ ? block_ : await getAction(client2, getBlock, "getBlock")({});
   if (typeof chain?.fees?.estimateFeesPerGas === "function") {
-    const fees = await chain.fees.estimateFeesPerGas({
+    const fees2 = await chain.fees.estimateFeesPerGas({
       block: block_,
       client: client2,
       multiply,
       request,
       type
     });
-    if (fees !== null)
-      return fees;
+    if (fees2 !== null)
+      return fees2;
   }
   if (type === "eip1559") {
     if (typeof block.baseFeePerGas !== "bigint")
@@ -10417,6 +10428,9 @@ async function getTransactionCount(client2, { address, blockHash, blockNumber, b
   });
   return hexToNumber(count);
 }
+
+// node_modules/viem/_esm/actions/wallet/prepareTransactionRequest.js
+init_transaction();
 
 // node_modules/viem/_esm/utils/blob/blobsToCommitments.js
 init_toBytes();
@@ -10597,6 +10611,7 @@ function getTransactionType(transaction) {
 
 // node_modules/viem/_esm/actions/public/fillTransaction.js
 init_parseAccount();
+init_transaction();
 
 // node_modules/viem/_esm/utils/errors/getTransactionError.js
 init_node();
@@ -10684,35 +10699,41 @@ async function fillTransaction(client2, parameters) {
     delete transaction.v;
     delete transaction.yParity;
     transaction.data = transaction.input;
-    if (transaction.gas)
-      transaction.gas = parameters.gas ?? transaction.gas;
-    if (transaction.gasPrice)
-      transaction.gasPrice = parameters.gasPrice ?? transaction.gasPrice;
-    if (transaction.maxFeePerBlobGas)
-      transaction.maxFeePerBlobGas = parameters.maxFeePerBlobGas ?? transaction.maxFeePerBlobGas;
-    if (transaction.maxFeePerGas)
-      transaction.maxFeePerGas = parameters.maxFeePerGas ?? transaction.maxFeePerGas;
-    if (transaction.maxPriorityFeePerGas)
-      transaction.maxPriorityFeePerGas = parameters.maxPriorityFeePerGas ?? transaction.maxPriorityFeePerGas;
-    if (typeof transaction.nonce !== "undefined")
-      transaction.nonce = parameters.nonce ?? transaction.nonce;
-    const feeMultiplier = await (async () => {
-      if (typeof chain?.fees?.baseFeeMultiplier === "function") {
-        const block = await getAction(client2, getBlock, "getBlock")({});
-        return chain.fees.baseFeeMultiplier({
-          block,
-          client: client2,
-          request: parameters
-        });
-      }
-      return chain?.fees?.baseFeeMultiplier ?? 1.2;
-    })();
-    if (feeMultiplier < 1)
-      throw new BaseFeeScalarError();
-    const decimals = feeMultiplier.toString().split(".")[1]?.length ?? 0;
-    const denominator = 10 ** decimals;
-    const multiplyFee = (base) => base * BigInt(Math.round(feeMultiplier * denominator)) / BigInt(denominator);
-    if (!transaction.feePayerSignature) {
+    const hasFeePayerSignature = typeof transaction.feePayerSignature !== "undefined" && transaction.feePayerSignature !== null;
+    if (hasFeePayerSignature && typeof nonce !== "undefined" && transaction.nonce !== nonce)
+      throw new FeePayerNonceMismatchError({
+        filledNonce: transaction.nonce,
+        requestedNonce: nonce
+      });
+    if (!hasFeePayerSignature) {
+      if (transaction.gas)
+        transaction.gas = parameters.gas ?? transaction.gas;
+      if (transaction.gasPrice)
+        transaction.gasPrice = parameters.gasPrice ?? transaction.gasPrice;
+      if (transaction.maxFeePerBlobGas)
+        transaction.maxFeePerBlobGas = parameters.maxFeePerBlobGas ?? transaction.maxFeePerBlobGas;
+      if (transaction.maxFeePerGas)
+        transaction.maxFeePerGas = parameters.maxFeePerGas ?? transaction.maxFeePerGas;
+      if (transaction.maxPriorityFeePerGas)
+        transaction.maxPriorityFeePerGas = parameters.maxPriorityFeePerGas ?? transaction.maxPriorityFeePerGas;
+      if (typeof transaction.nonce !== "undefined")
+        transaction.nonce = parameters.nonce ?? transaction.nonce;
+      const feeMultiplier = await (async () => {
+        if (typeof chain?.fees?.baseFeeMultiplier === "function") {
+          const block = await getAction(client2, getBlock, "getBlock")({});
+          return chain.fees.baseFeeMultiplier({
+            block,
+            client: client2,
+            request: parameters
+          });
+        }
+        return chain?.fees?.baseFeeMultiplier ?? 1.2;
+      })();
+      if (feeMultiplier < 1)
+        throw new BaseFeeScalarError();
+      const decimals = feeMultiplier.toString().split(".")[1]?.length ?? 0;
+      const denominator = 10 ** decimals;
+      const multiplyFee = (base) => base * BigInt(Math.round(feeMultiplier * denominator)) / BigInt(denominator);
       if (transaction.maxFeePerGas && !parameters.maxFeePerGas)
         transaction.maxFeePerGas = multiplyFee(transaction.maxFeePerGas);
       if (transaction.gasPrice && !parameters.gasPrice)
@@ -10841,6 +10862,9 @@ async function prepareTransactionRequest(client2, args) {
     const error = e;
     if (error.name !== "TransactionExecutionError")
       return request;
+    const nonceMismatch = error.walk?.((error2) => error2 instanceof FeePayerNonceMismatchError);
+    if (nonceMismatch)
+      throw e;
     const executionReverted = error.walk?.((e2) => {
       const error2 = e2;
       return error2.name === "ExecutionRevertedError";
@@ -11976,9 +12000,14 @@ async function sendTransaction(client2, parameters) {
         to
       });
       const serializer = chain?.serializers?.transaction;
-      const serializedTransaction = await account2.signTransaction(request, {
+      const signedTransaction = await account2.signTransaction(request, {
         serializer
       });
+      const transactionEnvelope = (chain ?? client2.chain)?.serializers?.transactionEnvelope;
+      const serializedTransaction = transactionEnvelope ? await transactionEnvelope({
+        serializedTransaction: signedTransaction,
+        transaction: request
+      }) : signedTransaction;
       return await getAction(client2, sendRawTransaction, "sendRawTransaction")({
         serializedTransaction
       });
@@ -15751,6 +15780,7 @@ init_Hex();
 
 // node_modules/ox/_esm/core/Secp256k1.js
 init_secp256k1();
+init_Bytes();
 init_Hex();
 function recoverAddress2(options) {
   return fromPublicKey(recoverPublicKey2(options));
@@ -15762,6 +15792,7 @@ function recoverPublicKey2(options) {
   const point = signature_.recoverPublicKey(from3(payload).substring(2));
   return from4(point);
 }
+var fromSeedDomain = fromString("ox.secp256k1.fromSeed.v1");
 
 // node_modules/ox/_esm/erc8010/SignatureErc8010.js
 var magicBytes = "0x8010801080108010801080108010801080108010801080108010801080108010";
@@ -18288,9 +18319,14 @@ async function sendTransactionSync(client2, parameters) {
         to
       });
       const serializer = chain?.serializers?.transaction;
-      const serializedTransaction = await account2.signTransaction(request, {
+      const signedTransaction = await account2.signTransaction(request, {
         serializer
       });
+      const transactionEnvelope = (chain ?? client2.chain)?.serializers?.transactionEnvelope;
+      const serializedTransaction = transactionEnvelope ? await transactionEnvelope({
+        serializedTransaction: signedTransaction,
+        transaction: request
+      }) : signedTransaction;
       return await getAction(client2, sendRawTransactionSync, "sendRawTransactionSync")({
         serializedTransaction,
         throwOnReceiptRevert,
@@ -37800,9 +37836,18 @@ var createPublicClient2 = (chainConfig, customTransport) => {
 };
 
 // public/app.mjs
-var ADJUDICATOR_ADDRESS = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F";
+var ADJUDICATOR_ADDRESS = "0x9d8712ce10a354044d6132b90C088f2677c43963";
+var RELAY = "https://genlayer-adjudicator-app.onrender.com";
 var client = null;
 var account = null;
+var feeOpts = null;
+async function fees() {
+  if (!feeOpts) {
+    const est = await createClient2({ chain: testnetBradbury }).estimateTransactionFees({});
+    feeOpts = { distribution: est.distribution, feeValue: est.feeValue };
+  }
+  return feeOpts;
+}
 async function connectWallet() {
   const b = document.getElementById("addr");
   const note = document.getElementById("netNote");
@@ -37839,6 +37884,11 @@ async function openDispute() {
   if (!requireWallet(b)) return;
   try {
     const txHash = await client.writeContract({
+      // `account` must be passed per call. createClient builds its transaction
+      // actions over an INNER client, so assigning `client.account` after
+      // connect() never reaches writeContract and every write fails with
+      // "No account set" - even from a real MetaMask session.
+      account,
       address: ADJUDICATOR_ADDRESS,
       functionName: "open_dispute",
       args: [
@@ -37846,7 +37896,8 @@ async function openDispute() {
         document.getElementById("service").value,
         document.getElementById("claim").value
       ],
-      value: BigInt(document.getElementById("amount").value || 0)
+      value: BigInt(document.getElementById("amount").value || 0),
+      fees: await fees()
     });
     b.className = "status ok";
     b.textContent = "Opened. Tx: " + txHash;
@@ -37862,10 +37913,12 @@ async function resolve() {
   if (!requireWallet(b)) return;
   try {
     const txHash = await client.writeContract({
+      account,
       address: ADJUDICATOR_ADDRESS,
       functionName: "resolve",
       args: [document.getElementById("disputeId").value],
-      value: 0n
+      value: 0n,
+      fees: await fees()
     });
     b.className = "status ok";
     b.textContent = "Resolved. Tx: " + txHash;
@@ -37878,7 +37931,7 @@ async function read() {
   const o = document.getElementById("out");
   o.textContent = "Reading\u2026";
   try {
-    const r = await fetch("/api/dispute/" + document.getElementById("readId").value);
+    const r = await fetch(RELAY + "/dispute/" + document.getElementById("readId").value);
     const d = await r.json();
     o.textContent = JSON.stringify(d, null, 2);
   } catch (e) {

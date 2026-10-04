@@ -1,9 +1,16 @@
 import { createClient } from "genlayer-js";
 import { testnetBradbury } from "genlayer-js/chains";
 
-const ADJUDICATOR_ADDRESS = "0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F";
+const ADJUDICATOR_ADDRESS = "0x9d8712ce10a354044d6132b90C088f2677c43963";
+const RELAY = "https://genlayer-adjudicator-app.onrender.com";
 let client = null;
 let account = null;
+
+// No fee distribution here: this app targets Bradbury, which runs genlayer-js
+// 1.1.8. That SDK has no fee-distribution concept - `estimateTransactionFees`
+// does not exist in it. The FeeValueMustBeNonZero requirement belongs to the
+// 2.x runtime on Studio, not to Bradbury. Adding one broke every write with
+// "estimateTransactionFees is not a function".
 
 async function connectWallet(){
   const b = document.getElementById('addr');
@@ -36,16 +43,30 @@ function requireWallet(bar){
   return true;
 }
 
+function validAddress(a){ return /^0x[0-9a-fA-F]{40}$/.test(String(a||'').trim()); }
+
 async function openDispute(){
   const b=document.getElementById('openStatus'); b.className='status'; b.textContent='Opening — confirm in MetaMask…';
   if(!requireWallet(b)) return;
+  // Refuse a malformed agent address before asking anyone to deposit. Without
+  // this the contract stores the text verbatim and the eventual payout targets
+  // an address that does not exist - the deposit becomes unrecoverable.
+  const agent=document.getElementById('agent').value.trim();
+  if(!validAddress(agent)){ b.className='status err'; b.textContent='Valid agent address required.'; return; }
+  const service=document.getElementById('service').value.trim();
+  if(!/^https?:\/\//.test(service)){ b.className='status err'; b.textContent='Service URL must start with http:// or https://'; return; }
+  const claimText=document.getElementById('claim').value.trim();
+  if(!claimText){ b.className='status err'; b.textContent='Describe what went wrong.'; return; }
   try{
     const txHash = await client.writeContract({
+      // `account` must be passed per call. createClient builds its transaction
+      // actions over an INNER client, so assigning `client.account` after
+      // connect() never reaches writeContract and every write fails with
+      // "No account set" - even from a real MetaMask session.
+      account,
       address: ADJUDICATOR_ADDRESS,
       functionName: "open_dispute",
-      args: [document.getElementById('agent').value,
-             document.getElementById('service').value,
-             document.getElementById('claim').value],
+      args: [agent, service, claimText],
       value: BigInt(document.getElementById('amount').value || 0),
     });
     b.className='status ok'; b.textContent='Opened. Tx: '+txHash;
@@ -57,6 +78,7 @@ async function resolve(){
   if(!requireWallet(b)) return;
   try{
     const txHash = await client.writeContract({
+      account,
       address: ADJUDICATOR_ADDRESS,
       functionName: "resolve",
       args: [document.getElementById('disputeId').value],
@@ -69,7 +91,8 @@ async function resolve(){
 async function read(){
   const o=document.getElementById('out'); o.textContent='Reading…';
   try{
-    const r=await fetch('/api/dispute/'+document.getElementById('readId').value);
+    // server.js exposes /dispute/:id, not /api/dispute/:id
+    const r=await fetch(RELAY+'/dispute/'+document.getElementById('readId').value);
     const d=await r.json();
     o.textContent=JSON.stringify(d,null,2);
   }catch(e){o.textContent='Error: '+e;}

@@ -6,7 +6,9 @@ services:
     buildCommand: npm install
     startCommand: node server.js
     envVars:
-      - key: SERVER_PRIVATE_KEY
-        sync: false
+      # No SERVER_PRIVATE_KEY. The relay is read-only and signs nothing; every
+      # write is signed by the user's own wallet in the browser. Requesting a
+      # key here would make Render prompt for one and leave an unused secret in
+      # the deployment settings - exactly the custody risk this change removes.
       - key: GENLAYER_RPC
         value: https://rpc-bradbury.genlayer.com
