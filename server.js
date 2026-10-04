@@ -14,12 +14,19 @@
 
 import express from "express";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 import { createClient } from "genlayer-js";
 import { studioDevnet } from "genlayer-js/chains";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Serve the UI. GitHub Pages is the primary front end, but the relay should
+// still return the app when opened directly rather than a bare 404.
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+app.use(express.static(path.join(HERE, "public")));
 
 const CONTRACT_ADDRESS = "0x7b6133E6950c88e002169FeA28dED15c9AFA0a03";
 const RPC_URL = process.env.GENLAYER_RPC || "https://studio-dev.genlayer.com/api";

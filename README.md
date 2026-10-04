@@ -65,7 +65,7 @@ No endpoint can move value.
 - **Explorer**: https://explorer-studio-dev.genlayer.com/address/0x7b6133E6950c88e002169FeA28dED15c9AFA0a03
 - **Source**: [`contracts/agent_payment_adjudicator_v2.py`](contracts/agent_payment_adjudicator_v2.py)
 
-Source: https://github.com/Adebisi1111/genlayer-adjudicator-app/blob/main/contracts/agent_payment_adjudicator.py
+Source: [`contracts/agent_payment_adjudicator_v2.py`](contracts/agent_payment_adjudicator_v2.py)
 
 > `0x9d8712ce...` (Bradbury 4221) and `0xa80BD90c...` are both superseded. On
 > Bradbury `resolve()` never completed on any dispute, including ones predating
@@ -98,14 +98,34 @@ The payout lands when the transaction **FINALIZES**, not when it is accepted.
 Between those two points the contract still reports the full balance, so a
 caller that samples once after the write reads a number that is about to change.
 
+## Proof that escrow pays out
+
+Two disputes, same payer, same agent, differing only in whether GenVM could
+reach the evidence. Run on Studio Devnet against the deployed contract:
+
+| evidence | verdict | status | balance |
+|---|---|---|---|
+| reachable Wikipedia page | `DELIVERED` | `resolved_agent` | agent **2.9998 -> 3.8997 GEN** (+1.0 exactly) |
+| unresolvable host | `NOT_DELIVERED` | `resolved_payer` | payer refunded |
+
+Both `resolve` transactions reached `execution_result: SUCCESS`. The agent
+gained precisely the 1 GEN escrowed - not rounded, not net of a fee. Reproduce
+with `node e2e-settlement.mjs` (needs `ADJ_ADDRESS`, `PAYER_PK`, `AGENT_PK`).
+
+An external message pays a wallet on **finalization**, not on acceptance.
+Between those two points the contract still reports the full balance, so
+anything measuring a payout has to wait for finalization rather than sample once.
+
 ## Tests
 
+
 ```
-python3.14 -m pytest tests/ -q      # 13 contract tests
+python3.14 -m pytest tests/ -q      # 17 contract tests
 ESCROW_PK=... node e2e-frontend.mjs # 7 browserless frontend tests
 ```
 
-`tests/direct/test_adversarial.py` covers the escrow path: unknown dispute ids,
+`tests/direct/test_adversarial.py` and `tests/direct/test_v2_guards.py` cover the
+escrow path: unknown dispute ids,
 unreachable evidence defaulting to a refund, an invented verdict, self-named
 disputes, deposit-amount fidelity, counter uniqueness, double-resolve, and
 agent-address substitution.
@@ -117,5 +137,5 @@ agent-address substitution.
 - express
 - cors
 - viem
-- genlayer-js 1.1.8 (Bradbury runs the 1.x SDK; there is no fee-distribution
-  concept in it, so writes carry none)
+- genlayer-js ^2.0.0-rc.1 (Studio Devnet runs the 2.x SDK, which requires a
+  fee distribution on every write)

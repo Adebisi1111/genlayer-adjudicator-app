@@ -1,42 +1,52 @@
-# GenLayer Agent Payment Adjudicator - Backend Relay Server
+# GenLayer Agent Payment Adjudicator — Backend Relay Server
+
+## This server holds no private key and signs nothing.
+
+It serves the UI and answers read-only `get_dispute` queries. Every write is
+signed by the user's own browser wallet, so the escrow deposit is genuinely the
+payer's and each dispute is attributable to whoever opened it.
+
+An earlier version of `server.js` held `SERVER_PRIVATE_KEY` and wrote through
+it. That made it a shared custodial hot wallet controlling an escrow contract:
+anyone who could reach the endpoint could deposit and trigger payout from one
+pooled balance. The key is gone, and `render.yaml` no longer requests one.
 
 ## Quick Deploy
 
-### Option 1: Render (recommended)
-1. Push this repo to GitHub
-2. Connect repo to Render
-3. Set environment variables:
-   - `SERVER_PRIVATE_KEY` = your private key
-   - `GENLAYER_RPC` = https://rpc-bradbury.genlayer.com
-4. Deploy
+`render.yaml` is committed, so Render picks the config up on connect. No
+secrets are required.
 
-### Option 2: Railway
-1. Push to GitHub
-2. Connect to Railway
-3. Set env vars
-4. Deploy
+### Render
+1. Connect this repo to Render as a Web Service
+2. Deploy — `render.yaml` sets `GENLAYER_RPC` and the start command
 
-### Option 3: Local with PM2
+### Local
 ```bash
 npm install
-echo "SERVER_PRIVATE_KEY=0x..." > .env
-echo "GENLAYER_RPC=https://rpc-bradbury.genlayer.com" >> .env
-pm2 start server.js --name adjudicator-relay
+node server.js
+# http://localhost:3001
 ```
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GENLAYER_RPC` | no | Defaults to `https://studio-dev.genlayer.com/api` |
+| `PORT` | no | Server port (default: 3001) |
+| `SERVER_PRIVATE_KEY` | **never** | Removed. Setting it has no effect; the relay cannot sign. |
 
 ## API Endpoints
 
 | Method | Endpoint | Body | Description |
 |--------|----------|------|-------------|
-| GET | `/health` | - | Health check |
-| POST | `/open-dispute` | `{agent, serviceUrl, claim, value}` | Create dispute |
-| POST | `/resolve` | `{disputeId}` | Resolve with AI |
-| GET | `/dispute/:id` | - | Read dispute |
+| GET | `/health` | - | Reports `readOnly: true` and the contract address |
+| POST | `/open-dispute` | `{agent, serviceUrl, claim}` | Returns calldata only; the browser signs |
+| POST | `/resolve` | `{disputeId}` | Returns calldata only; the browser signs |
+| GET | `/dispute/:id` | - | Read a dispute |
 
-## Environment Variables
+**No endpoint can move value.** The two POST routes validate input and hand
+back the calldata for the browser to submit with the user's wallet.
 
-| Variable | Description |
-|----------|-------------|
-| `SERVER_PRIVATE_KEY` | Private key for signing (with 0x prefix) |
-| `GENLAYER_RPC` | GenLayer Bradbury RPC URL |
-| `PORT` | Server port (default: 3001) |
+## Contract
+
+- `0x7b6133E6950c88e002169FeA28dED15c9AFA0a03` on GenLayer Studio Devnet (61997)
