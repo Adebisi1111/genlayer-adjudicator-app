@@ -41300,20 +41300,20 @@ async function openDispute() {
   b.className = "status";
   b.textContent = "Opening \u2014 confirm in MetaMask\u2026";
   if (!requireWallet(b)) return;
-  const agent = document.getElementById("agent").value.trim();
-  if (!validAddress(agent)) {
+  const agent2 = document.getElementById("agent").value.trim();
+  if (!validAddress(agent2)) {
     b.className = "status err";
     b.textContent = "Valid agent address required.";
     return;
   }
-  const service = document.getElementById("service").value.trim();
-  if (!/^https?:\/\//.test(service)) {
+  const service2 = document.getElementById("service").value.trim();
+  if (!/^https?:\/\//.test(service2)) {
     b.className = "status err";
     b.textContent = "Service URL must start with http:// or https://";
     return;
   }
-  const claimText = document.getElementById("claim").value.trim();
-  if (!claimText) {
+  const claimText2 = document.getElementById("claim").value.trim();
+  if (!claimText2) {
     b.className = "status err";
     b.textContent = "Describe what went wrong.";
     return;
@@ -41328,7 +41328,7 @@ async function openDispute() {
       address: ADJUDICATOR_ADDRESS,
       functionName: "open_dispute",
       fees: await fees(),
-      args: [agent, service, claimText],
+      args: [agent2, service2, claimText2],
       value: BigInt(document.getElementById("amount").value || 0)
     });
     b.className = "status ok";
@@ -41345,13 +41345,25 @@ async function resolve() {
   if (!requireWallet(b)) return;
   try {
     const disputeId = document.getElementById("disputeId").value.trim();
+    const genText = document.getElementById("amount").value.trim() || "0";
+    if (!/^\d*(\.\d+)?$/.test(genText)) {
+      b.className = "status err";
+      b.textContent = "Enter an amount in GEN, digits only.";
+      return;
+    }
+    const wei = BigInt(Math.round(parseFloat(genText) * 1e18));
+    if (wei <= 0n) {
+      b.className = "status err";
+      b.textContent = "Deposit must be greater than 0 GEN.";
+      return;
+    }
     const txHash = await client.writeContract({
       account,
       address: ADJUDICATOR_ADDRESS,
-      functionName: "resolve",
-      args: [disputeId],
-      value: 0n,
-      fees: await fees()
+      functionName: "open_dispute",
+      fees: await fees(),
+      args: [agent, service, claimText],
+      value: wei
     });
     b.textContent = "Submitted. Waiting for the AI validators to agree \u2014 the payout lands when the transaction FINALIZES. Tx: " + txHash;
     const verdict = await leaderResult(txHash);

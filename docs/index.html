@@ -51,7 +51,7 @@
     <label>Claim</label>
     <textarea id="claim" placeholder="What went wrong">Agent did not deliver the agreed service.</textarea>
     <label>Amount (GEN, deposited — paid from YOUR wallet)</label>
-    <input id="amount" placeholder="0" value="0" />
+    <input id="amount" type="number" step="0.01" min="0.01" placeholder="1" value="1" />
     <button onclick="openDispute()">Open dispute (sign with your wallet)</button>
     <div class="status" id="openStatus"></div>
   </div>

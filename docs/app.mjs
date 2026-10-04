@@ -109,13 +109,25 @@ async function resolve(){
   if(!requireWallet(b)) return;
   try{
     const disputeId = document.getElementById('disputeId').value.trim();
+    // The field is labelled GEN but was being sent straight through as wei, so
+    // entering 1 escrowed 1 wei and open_dispute rejected it as a zero deposit.
+    // Convert here so the label matches what is actually escrowed.
+    const genText = document.getElementById('amount').value.trim() || '0';
+    if (!/^\d*(\.\d+)?$/.test(genText)) {
+      b.className = 'status err'; b.textContent = 'Enter an amount in GEN, digits only.'; return;
+    }
+    const wei = BigInt(Math.round(parseFloat(genText) * 1e18));
+    if (wei <= 0n) {
+      b.className = 'status err'; b.textContent = 'Deposit must be greater than 0 GEN.'; return;
+    }
+
     const txHash = await client.writeContract({
       account,
       address: ADJUDICATOR_ADDRESS,
-      functionName: "resolve",
-      args: [disputeId],
-      value: 0n,
+      functionName: "open_dispute",
       fees: await fees(),
+      args: [agent, service, claimText],
+      value: wei,
     });
     b.textContent = 'Submitted. Waiting for the AI validators to agree — the payout lands when the transaction FINALIZES. Tx: ' + txHash;
     const verdict = await leaderResult(txHash);

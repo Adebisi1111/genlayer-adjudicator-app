@@ -21,7 +21,15 @@ const { createClient, createAccount } = await import('genlayer-js');
 const { studioDevnet } = await import('genlayer-js/chains');
 const { createWalletClient, http } = await import('viem');
 
-const wallet = createAccount(PK);
+// Normalise: the key may arrive with or without the 0x prefix. createAccount
+// rejects a bare 32-char string with an opaque noble-curves error.
+function normKey(v) {
+  const s = String(v || '').trim();
+  if (/^0x[0-9a-fA-F]{64}$/.test(s)) return s;
+  if (/^[0-9a-fA-F]{64}$/.test(s)) return '0x' + s;
+  throw new Error('ESCROW_PK must be a 32-byte hex key');
+}
+const wallet = createAccount(normKey(PK));
 const pub = createWalletClient({
   chain: studioDevnet,
   transport: http(studioDevnet.rpcUrls.default.http[0]),
