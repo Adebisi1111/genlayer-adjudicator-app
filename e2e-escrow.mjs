@@ -74,3 +74,12 @@ console.log('AFTER payer bal ', pb.toFixed(4), 'GEN');
 console.log('AFTER agent bal ', ab.toFixed(4), 'GEN');
 console.log('payer delta     ', (pb - (before.amount / 1e18)).toFixed(4));
 console.log('verdict         ', after.verdict, '| status', after.status);
+
+// Fail loudly if the dispute did not actually settle. Without this the script
+// exits 0 after an unresolved consensus, which reads as a successful escrow
+// resolution when nothing was released.
+if (after.status === 'open') {
+  console.error('\nUNSETTLED: dispute still open. consensus did not produce a verdict.');
+  process.exit(2);
+}
+console.log('\nSETTLED: funds released to', after.status === 'resolved_agent' ? AGENT : PAYER);
