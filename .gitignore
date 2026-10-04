@@ -2,3 +2,20 @@ node_modules/
 package-lock.json
 *.log
 .env
+.env.*
+!.env.example
+
+# Compiled Python bytecode - the local test runner rewrites these on every run
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Generated per-session by tests/direct/_local_pin.py: a 1.x-loadable rewrite of
+# the chain source so the local 1.x runner can exercise the 2.x contract. The
+# chain source is canonical; this copy must never be committed or the two drift.
+contracts/_local_pin_*.py
+
+# Scratch files from debugging sessions
+_dbg*.mjs
+_why*.mjs
+_probe*.py
