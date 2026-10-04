@@ -11,4 +11,4 @@ services:
       # key here would make Render prompt for one and leave an unused secret in
       # the deployment settings - exactly the custody risk this change removes.
       - key: GENLAYER_RPC
-        value: https://rpc-bradbury.genlayer.com
+        value: https://studio-dev.genlayer.com/api

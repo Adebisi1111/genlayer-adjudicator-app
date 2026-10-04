@@ -15,19 +15,19 @@
 import express from "express";
 import cors from "cors";
 import { createClient } from "genlayer-js";
-import { testnetBradbury } from "genlayer-js/chains";
+import { studioDevnet } from "genlayer-js/chains";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const CONTRACT_ADDRESS = "0x9d8712ce10a354044d6132b90C088f2677c43963";
-const RPC_URL = process.env.GENLAYER_RPC || "https://rpc-bradbury.genlayer.com";
+const CONTRACT_ADDRESS = "0x7b6133E6950c88e002169FeA28dED15c9AFA0a03";
+const RPC_URL = process.env.GENLAYER_RPC || "https://studio-dev.genlayer.com/api";
 
 // No account is configured on purpose. A client carrying an account can sign;
 // this one cannot, so a write added here later fails loudly instead of quietly
 // spending from a pooled key.
-const client = createClient({ chain: testnetBradbury });
+const client = createClient({ chain: studioDevnet });
 
 console.log("Read-only relay started (no signing key)");
 console.log("Contract:", CONTRACT_ADDRESS);

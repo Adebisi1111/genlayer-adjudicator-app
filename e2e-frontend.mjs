@@ -18,13 +18,13 @@ const PK = process.env.ESCROW_PK;
 if (!PK) { console.error('ESCROW_PK required'); process.exit(1); }
 
 const { createClient, createAccount } = await import('genlayer-js');
-const { testnetBradbury } = await import('genlayer-js/chains');
+const { studioDevnet } = await import('genlayer-js/chains');
 const { createWalletClient, http } = await import('viem');
 
 const wallet = createAccount(PK);
 const pub = createWalletClient({
-  chain: testnetBradbury,
-  transport: http(testnetBradbury.rpcUrls.default.http[0]),
+  chain: studioDevnet,
+  transport: http(studioDevnet.rpcUrls.default.http[0]),
 });
 
 // ─── Minimal DOM ────────────────────────────────────────────────
@@ -57,9 +57,9 @@ global.window = {
         case 'eth_accounts':
           return [wallet.address];
         case 'eth_chainId':
-          return '0x' + (4221).toString(16);   // Bradbury chain id
+          return '0x' + (61997).toString(16);
         case 'net_version':
-          return '4221';
+          return '61997';
         case 'web3_clientVersion':
           return 'Mozilla/5.0';
         case 'wallet_getSnaps':
@@ -75,7 +75,7 @@ global.window = {
             gas: BigInt(tx.gas || '0x5208'),
             nonce: tx.nonce !== undefined ? Number(BigInt(tx.nonce)) : undefined,
             gasPrice: tx.gasPrice ? BigInt(tx.gasPrice) : undefined,
-            chainId: 4221,
+            chainId: 61997,
             type: 'legacy',
           });
         }

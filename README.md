@@ -60,17 +60,43 @@ No endpoint can move value.
 
 ## Contract
 
-- **Address**: `0x9d8712ce10a354044d6132b90C088f2677c43963`
-- **Network**: GenLayer Bradbury Testnet (Chain ID: 4221)
-- **Explorer**: https://explorer-bradbury.genlayer.com/address/0x9d8712ce10a354044d6132b90C088f2677c43963
+- **Address**: `0x7b6133E6950c88e002169FeA28dED15c9AFA0a03`
+- **Network**: GenLayer Studio Devnet (Chain ID: 61997)
+- **Explorer**: https://explorer-studio-dev.genlayer.com/address/0x7b6133E6950c88e002169FeA28dED15c9AFA0a03
+- **Source**: [`contracts/agent_payment_adjudicator_v2.py`](contracts/agent_payment_adjudicator_v2.py)
 
 Source: https://github.com/Adebisi1111/genlayer-adjudicator-app/blob/main/contracts/agent_payment_adjudicator.py
 
-> The address above is the current deployment. `0xa80BD90cDa1BDFF2f7442cAA6415686b2935965F`
-> appears in earlier revisions of this file and in older frontend builds; it is
-> superseded. The frontend now hard-codes `0x9d8712ce...`.
+> `0x9d8712ce...` (Bradbury 4221) and `0xa80BD90c...` are both superseded. On
+> Bradbury `resolve()` never completed on any dispute, including ones predating
+> this work, because the payout used the wrong transfer path. See below.
 
 ---
+
+## Escrow payout — how it works
+
+A wallet is **not** an Intelligent Contract; it is an account on the chain
+underneath. `gl.get_contract_at(addr).emit_transfer(...)` posts an **internal**
+message (`PostMessage`) addressed to another Intelligent Contract. Send one to a
+wallet and it is accepted, recorded and dropped — no error, no movement, and the
+balance is not even deducted.
+
+Paying a wallet must leave through the ghost contract as an **external**
+message, addressed via an empty EVM interface. It takes `value` only, with no
+`on`, because an external message always executes on finalization:
+
+```python
+@gl.evm.contract_interface
+class _Recipient:
+    class View: pass
+    class Write: pass
+
+_Recipient(Address(payer)).emit_transfer(value=payout)
+```
+
+The payout lands when the transaction **FINALIZES**, not when it is accepted.
+Between those two points the contract still reports the full balance, so a
+caller that samples once after the write reads a number that is about to change.
 
 ## Tests
 
