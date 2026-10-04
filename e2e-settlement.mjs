@@ -12,22 +12,23 @@ import { createClient, createAccount } from 'genlayer-js';
 import { studioDevnet } from 'genlayer-js/chains';
 
 const A = process.env.ADJ_ADDRESS;
-const PAYER = '0x3892d37d6AC0B57421d7f2cf624DAca00246E5CF';
-const AGENT = '0x4B05Fe891a06f021071Ed4722cF139B8717aFAEa';
+const PAYER = process.env.PAYER_ADDR || payer.address;
+const AGENT = process.env.AGENT_ADDR || agent.address;
 const DEPOSIT = 1n * 10n ** 18n; // 1 GEN
 
 if (!A) { console.error('ADJ_ADDRESS required'); process.exit(1); }
 
-// Normalise the key: the escrow key files already carry the 0x prefix, and
-// createAccount rejects a doubled prefix with an opaque noble-curves error.
-function keyOf(path) {
-  const s = fs.readFileSync(path, 'utf8').trim();
+// Keys come from the environment, never from a checked-in path. The escrow
+// wallets used for the recorded run were shredded afterwards, so a re-run needs
+// fresh throwaway keys exported as PAYER_PK and AGENT_PK.
+function keyOf(v) {
+  const s = String(v || '').trim();
   if (/^0x[0-9a-fA-F]{64}$/.test(s)) return s;
   if (/^[0-9a-fA-F]{64}$/.test(s)) return '0x' + s;
-  throw new Error('malformed key in ' + path);
+  throw new Error('malformed key: set PAYER_PK and AGENT_PK');
 }
-const payer = createAccount(keyOf('/tmp/.esc_payer'));
-const agent = createAccount(keyOf('/tmp/.esc_agent'));
+const payer = createAccount(keyOf(process.env.PAYER_PK));
+const agent = createAccount(keyOf(process.env.AGENT_PK));
 const client = createClient({ chain: studioDevnet, account: payer });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

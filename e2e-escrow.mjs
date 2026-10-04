@@ -15,12 +15,12 @@ const AGENT = '0x4B05Fe891a06f021071Ed4722cF139B8717aFAEa';
 const JOB = process.argv[2] || 'DSP-6';
 // Accept either a raw key or a path to one, so the caller cannot get this
 // wrong silently the way a bare readFileSync(env) does.
+// Key comes from the environment, never from a checked-in path.
 function loadKey(v) {
-  if (!v) throw new Error('RESOLVER_PK required');
-  const s = String(v).trim();
+  const s = String(v || '').trim();
   if (/^0x[0-9a-fA-F]{64}$/.test(s)) return s;
-  if (fs.existsSync(s)) return fs.readFileSync(s, 'utf8').trim();
-  throw new Error('RESOLVER_PK is neither a 0x key nor an existing file');
+  if (/^[0-9a-fA-F]{64}$/.test(s)) return '0x' + s;
+  throw new Error('RESOLVER_PK must be a 0x-prefixed 32-byte key');
 }
 const resolver = createAccount(loadKey(process.env.RESOLVER_PK));
 const c = createClient({ chain: testnetBradbury, account: resolver });
