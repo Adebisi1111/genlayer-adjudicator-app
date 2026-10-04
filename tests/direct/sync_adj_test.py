@@ -3,7 +3,7 @@ import json
 
 def test_adjudicate_refunds_payer(direct_vm, direct_deploy, direct_alice, direct_bob):
     """When service is NOT delivered, payer gets refunded."""
-    contract = direct_deploy("contracts/agent_payment_adjudicator.py")
+    contract = direct_deploy("contracts/_local_pin_adjudicator.py")
     direct_vm.sender = direct_alice  # payer
     direct_vm.value = 100  # deposit contested amount
 
@@ -23,7 +23,7 @@ def test_adjudicate_refunds_payer(direct_vm, direct_deploy, direct_alice, direct
 
 def test_adjudicate_pays_agent(direct_vm, direct_deploy, direct_alice, direct_bob):
     """When service IS delivered, agent gets paid."""
-    contract = direct_deploy("contracts/agent_payment_adjudicator.py")
+    contract = direct_deploy("contracts/_local_pin_adjudicator.py")
     direct_vm.sender = direct_alice
     direct_vm.value = 100
 
@@ -41,7 +41,7 @@ def test_adjudicate_pays_agent(direct_vm, direct_deploy, direct_alice, direct_bo
 
 def test_cannot_resolve_twice(direct_vm, direct_deploy, direct_alice, direct_bob):
     """Resolving an already-resolved dispute must revert."""
-    contract = direct_deploy("contracts/agent_payment_adjudicator.py")
+    contract = direct_deploy("contracts/_local_pin_adjudicator.py")
     direct_vm.sender = direct_alice
     direct_vm.value = 100
 
@@ -57,7 +57,7 @@ def test_cannot_resolve_twice(direct_vm, direct_deploy, direct_alice, direct_bob
 
 def test_consensus_validator_agrees(direct_vm, direct_deploy, direct_alice, direct_bob):
     """Canonical equivalence check: leader + validator agree on the verdict."""
-    contract = direct_deploy("contracts/agent_payment_adjudicator.py")
+    contract = direct_deploy("contracts/_local_pin_adjudicator.py")
     direct_vm.sender = direct_alice
     direct_vm.value = 100
     contract.open_dispute(direct_bob, "https://example.com/service", "not delivered")

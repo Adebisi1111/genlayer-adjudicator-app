@@ -29,7 +29,7 @@ def test_unknown_dispute_is_refused_cleanly(direct_vm, direct_deploy, direct_ali
     `resolve` indexes self.disputes[dispute_id] directly, so an unknown id
     raises a storage lookup error rather than a message a payer can act on.
     """
-    contract = direct_deploy("contracts/agent_payment_adjudicator.py")
+    contract = direct_deploy("contracts/_local_pin_adjudicator.py")
     direct_vm.sender = direct_alice
 
     with direct_vm.expect_revert():
@@ -38,7 +38,7 @@ def test_unknown_dispute_is_refused_cleanly(direct_vm, direct_deploy, direct_ali
 
 def test_get_dispute_unknown_is_refused(direct_vm, direct_deploy, direct_alice):
     """Reading a dispute that does not exist must refuse cleanly."""
-    contract = direct_deploy("contracts/agent_payment_adjudicator.py")
+    contract = direct_deploy("contracts/_local_pin_adjudicator.py")
     direct_vm.sender = direct_alice
 
     with direct_vm.expect_revert():
@@ -52,7 +52,7 @@ def test_unreachable_service_defaults_to_refund(direct_vm, direct_deploy, direct
     catch-all in _adjudicate has to yield NOT_DELIVERED so funds return to
     the payer rather than being paid out on missing evidence.
     """
-    contract = direct_deploy("contracts/agent_payment_adjudicator.py")
+    contract = direct_deploy("contracts/_local_pin_adjudicator.py")
     dispute_id = _open(direct_vm, contract, direct_alice, direct_bob,
                        url="https://this-host-does-not-exist-8f2a1b.example/x")
 
@@ -74,7 +74,7 @@ def test_invented_verdict_cannot_pay_the_agent(direct_vm, direct_deploy, direct_
     The model is free to return anything. An unrecognised verdict must fall
     back to NOT_DELIVERED so a malformed response can never pay out.
     """
-    contract = direct_deploy("contracts/agent_payment_adjudicator.py")
+    contract = direct_deploy("contracts/_local_pin_adjudicator.py")
     dispute_id = _open(direct_vm, contract, direct_alice, direct_bob)
 
     direct_vm.mock_web(r".*example\.com.*", {"status": 200, "body": "service page"})
@@ -94,7 +94,7 @@ def test_disputing_yourself_is_not_a_get_out(direct_vm, direct_deploy, direct_al
     Otherwise a payer could name themselves as the agent and collect the
     deposit twice: refunded as payer, and paid as agent.
     """
-    contract = direct_deploy("contracts/agent_payment_adjudicator.py")
+    contract = direct_deploy("contracts/_local_pin_adjudicator.py")
     direct_vm.sender = direct_alice
     direct_vm.value = 100
     contract.open_dispute(direct_alice, "https://example.com/service", "claim")
@@ -110,7 +110,7 @@ def test_deposit_is_recorded_from_message_value(direct_vm, direct_deploy, direct
     Escrow is only sound if the ledger amount cannot diverge from the funds
     the contract holds.
     """
-    contract = direct_deploy("contracts/agent_payment_adjudicator.py")
+    contract = direct_deploy("contracts/_local_pin_adjudicator.py")
     direct_vm.sender = direct_alice
     direct_vm.value = 777
     contract.open_dispute(direct_bob, "https://example.com/service", "claim")
@@ -125,7 +125,7 @@ def test_each_dispute_is_numbered_uniquely(direct_vm, direct_deploy, direct_alic
     If the counter is not advanced, the second deposit would overwrite the
     first record and one escrow could be settled twice.
     """
-    contract = direct_deploy("contracts/agent_payment_adjudicator.py")
+    contract = direct_deploy("contracts/_local_pin_adjudicator.py")
     direct_vm.sender = direct_alice
     direct_vm.value = 100
     contract.open_dispute(direct_bob, "https://example.com/a", "first")
@@ -145,7 +145,7 @@ def test_second_resolve_after_payout_is_refused(direct_vm, direct_deploy, direct
     This is the double-spend guard: without it a resolved dispute could be
     resolved again and pay the agent twice.
     """
-    contract = direct_deploy("contracts/agent_payment_adjudicator.py")
+    contract = direct_deploy("contracts/_local_pin_adjudicator.py")
     dispute_id = _open(direct_vm, contract, direct_alice, direct_bob)
 
     direct_vm.mock_web(r".*example\.com.*", {"status": 200, "body": "done"})
@@ -164,7 +164,7 @@ def test_agent_address_cannot_be_swapped_after_opening(direct_vm, direct_deploy,
     The payout branch trusts dispute.agent. If that field were writable by the
     payer, a payer could name any address and redirect the agent's payout.
     """
-    contract = direct_deploy("contracts/agent_payment_adjudicator.py")
+    contract = direct_deploy("contracts/_local_pin_adjudicator.py")
     dispute_id = _open(direct_vm, contract, direct_alice, direct_bob,
                        url="https://example.com/service")
 
