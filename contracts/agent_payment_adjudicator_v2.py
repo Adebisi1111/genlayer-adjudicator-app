@@ -12,6 +12,26 @@ from genlayer.storage import TreeMap
 from genlayer.storage import allow as allow_storage
 
 
+# Native payout path.
+#
+# A wallet is NOT an Intelligent Contract: it is an account on the chain
+# underneath. `gl.get_contract_at(addr).emit_transfer(...)` posts an INTERNAL
+# message (PostMessage) addressed to another Intelligent Contract. Send that to
+# a wallet and it is accepted, recorded and dropped - no error, no movement,
+# and the balance is not even deducted.
+#
+# Paying a wallet has to leave through the GHOST contract as an EXTERNAL
+# message, addressed through an empty EVM interface. It takes `value` only, no
+# `on`, because an external message always executes on finalization.
+@gl.evm.contract_interface
+class _Recipient:
+    class View:
+        pass
+
+    class Write:
+        pass
+
+
 @allow_storage
 @dataclass
 class Dispute:
@@ -128,11 +148,11 @@ Respond as JSON: {{"verdict": "DELIVERED"|"NOT_DELIVERED"}}.
         if payout > u256(0):
             if verdict == "NOT_DELIVERED":
                 # refund payer
-                gl.get_contract_at(Address(dispute.payer)).emit_transfer(value=payout)
+                _Recipient(Address(dispute.payer)).emit_transfer(value=payout)
                 dispute.status = "resolved_payer"
             else:
                 # service delivered -> pay the agent
-                gl.get_contract_at(Address(dispute.agent)).emit_transfer(value=payout)
+                _Recipient(Address(dispute.agent)).emit_transfer(value=payout)
                 dispute.status = "resolved_agent"
         else:
             # Nothing was escrowed, so nothing moves - but the verdict is still

@@ -104,17 +104,28 @@ async function run(label, url, claim) {
   console.log('resolve leader', res.result);
   if (res.stderr) console.log('stderr:', res.stderr.slice(-300).replace(/\n/g, ' | '));
 
-  await sleep(10000);
-  const d1 = await dispute(id);
-  const pb2 = await bal(PAYER), ab2 = await bal(AGENT);
+  // An external message pays on FINALIZATION, not on acceptance. The write can
+  // sit ACCEPTED for a long while with the balance still in the contract, so
+  // poll both balances rather than sampling once and declaring failure.
+  let d1 = await dispute(id);
+  let pb2 = await bal(PAYER), ab2 = await bal(AGENT);
+  for (let i = 0; i < 60 && d1.status === 'open'; i++) {
+    await sleep(10000);
+    d1 = await dispute(id);
+    pb2 = await bal(PAYER); ab2 = await bal(AGENT);
+  }
   console.log('after   status', d1.status, '| verdict', d1.verdict);
   console.log('after   payer', pb2.toFixed(4), '| agent', ab2.toFixed(4));
-  console.log('DELTA   payer', (pb2 - pb0).toFixed(4), '| agent', (ab2 - ab0).toFixed(4));
+  // Balances only, no derived delta: the acting wallet also pays gas, so a
+  // signed delta here reads as "gained -1.0000 GEN" for a payout that in fact
+  // delivered a full 1 GEN.
+  console.log('BALANCES payer', pb2.toFixed(4), '| agent', ab2.toFixed(4),
+              '| escrowed', (Number(d1.amount) / 1e18).toFixed(4));
 
   if (d1.status === 'open') { console.log('RESULT  UNSETTLED'); return false; }
   const winner = d1.status === 'resolved_agent' ? 'AGENT' : 'PAYER';
-  const wDelta = d1.status === 'resolved_agent' ? (ab2 - ab0) : (pb2 - pb0);
-  console.log('RESULT  SETTLED ->', winner, 'gained', wDelta.toFixed(4), 'GEN');
+  console.log('RESULT  SETTLED ->', winner, '| escrow', (Number(d1.amount) / 1e18).toFixed(4),
+              'GEN released to', winner === 'AGENT' ? 'the agent' : 'the payer');
   return true;
 }
 
