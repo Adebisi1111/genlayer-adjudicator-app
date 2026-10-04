@@ -1,61 +1,61 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="t d">
   <title id="t">Agent Payment Adjudicator</title>
-  <desc id="d">A coin held in escrow between a payer and an agent, released toward one of them by a consensus verdict.</desc>
+  <desc id="d">A shield holding scales of justice: escrowed funds weighed by consensus and awarded to the party found owed.</desc>
 
   <defs>
-    <linearGradient id="held" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#e8c98a"/>
-      <stop offset="1" stop-color="#b8903f"/>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a1d11"/>
+      <stop offset="1" stop-color="#1c130c"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f2dcaa"/>
+      <stop offset="1" stop-color="#c9a254"/>
     </linearGradient>
     <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
-      <feGaussianBlur stdDeviation="11"/>
+      <feGaussianBlur stdDeviation="12"/>
     </filter>
   </defs>
 
-  <!-- ground -->
   <rect width="512" height="512" rx="112" fill="#1c130c"/>
 
-  <!--
-    The mark is translated down so it sits optically centred: the validators sit
-    above the coin, so an unshifted composition reads as top-heavy.
-  -->
-  <g transform="translate(0,30)">
-    <ellipse cx="256" cy="430" rx="168" ry="22" fill="#e8c98a" opacity=".12" filter="url(#soft)"/>
-
-    <!-- payer, left: the one who deposited, and is owed if the claim fails -->
-    <circle cx="118" cy="300" r="40" fill="none" stroke="#a08a6b" stroke-width="8" opacity=".78"/>
-    <path d="M118 284v32M104 292h28M104 308h28" stroke="#a08a6b" stroke-width="7"
-          stroke-linecap="round" opacity=".8" fill="none"/>
-
-    <!-- agent, right: the one who did the work, paid if the claim holds -->
-    <circle cx="394" cy="300" r="40" fill="none" stroke="#7bd88f" stroke-width="8" opacity=".88"/>
-    <path d="M380 302l11 12 22-24" stroke="#7bd88f" stroke-width="8"
-          stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <g transform="translate(0,4)">
+    <ellipse cx="256" cy="440" rx="150" ry="20" fill="#e8c98a" opacity=".12" filter="url(#soft)"/>
 
     <!--
-      The verdict decides the direction. Solid to the payer, dashed to the
-      agent: exactly one route is taken, and which one is not fixed by the
-      design - the evidence decides it. Dashed rather than hidden, so both
-      remain possible until consensus resolves.
+      Shield: the conventional escrow/dispute container. It reads as protection
+      at a glance, which is the point - the deposit is held, not spent.
     -->
-    <g stroke-linecap="round" fill="none">
-      <path d="M228 240c-26 16-58 30-92 44" stroke="#e08a7a" stroke-width="8" opacity=".92"/>
-      <path d="M284 240c26 16 58 30 92 44" stroke="#7bd88f" stroke-width="8"
-            stroke-dasharray="6 20" opacity=".82"/>
+    <path d="M256 66l128 46v122c0 84-54 142-128 168-74-26-128-84-128-168V112z"
+          fill="url(#shield)" stroke="url(#gold)" stroke-width="11" stroke-linejoin="round"/>
+
+    <!-- inner rule, so the shield reads as a badge rather than a blob -->
+    <path d="M256 100l96 34v100c0 63-40 107-96 129-56-22-96-66-96-129v-100z"
+          fill="none" stroke="#e8c98a" stroke-width="4" opacity=".28"/>
+
+    <!--
+      Scales of justice: the standard arbitration mark. The beam sits level
+      because no verdict has been reached yet - escrow holds value without
+      favouring either side.
+    -->
+    <g stroke="#e8c98a" stroke-width="10" stroke-linecap="round" fill="none">
+      <path d="M256 156v168"/>
+      <path d="M160 196h192"/>
+      <path d="M212 324h88"/>
+      <path d="M160 196v34M352 196v34" stroke-width="6" opacity=".85"/>
     </g>
 
-    <!-- the coin, held level between the two parties: escrow -->
-    <circle cx="256" cy="200" r="52" fill="url(#held)" stroke="#e8c98a" stroke-width="7"/>
-    <path d="M256 174v52" stroke="#1c130c" stroke-width="9" stroke-linecap="round" opacity=".6"/>
-    <path d="M240 190h32M240 210h32" stroke="#1c130c" stroke-width="7"
-          stroke-linecap="round" opacity=".46"/>
+    <!-- pans, filled so they read as bowls rather than lines -->
+    <path d="M132 230h56l-28 40a28 28 0 01-56 0z" fill="url(#gold)"/>
+    <path d="M324 230h56a28 28 0 01-56 0z" fill="url(#gold)"/>
 
-    <!-- three validators converging on a single verdict -->
-    <path d="M196 128c14-14 34-22 52-22M316 128c-14-14-34-22-52-22"
-          stroke="#e8c98a" stroke-width="6" stroke-linecap="round" fill="none" opacity=".82"/>
-    <circle cx="176" cy="140" r="10" fill="#e8c98a"/>
-    <circle cx="336" cy="140" r="10" fill="#e8c98a"/>
-    <circle cx="256" cy="96" r="27" fill="#e8c98a"/>
-    <circle cx="256" cy="96" r="11" fill="#1c130c"/>
+    <!-- fulcrum, drawn last so it sits over the post joint -->
+    <circle cx="256" cy="196" r="12" fill="#f2dcaa"/>
+
+    <!--
+      Coin on the left pan: the escrowed deposit, and the reason a balance
+      exists at all. Sits proud of the pan so it reads as value being weighed
+      rather than decoration.
+    -->
+    <circle cx="160" cy="243" r="16" fill="#e8c98a" stroke="#1c130c" stroke-width="4"/>
   </g>
 </svg>
